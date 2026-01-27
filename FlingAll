@@ -1,0 +1,252 @@
+-- FINAL KOMBO TOUCHFLING + AUTO TP (+ LOOP JUMP + SMART INTERRUPT) + ANTI FLING
+-- Stable | Respawn Safe | No Conflict | LOGIKA FLING ASLI
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ================= GUI =================
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Name = "FinalComboGui"
+
+-- Toggle ☰
+local ToggleBtn = Instance.new("TextButton", ScreenGui)
+ToggleBtn.Size = UDim2.new(0,40,0,40)
+ToggleBtn.Position = UDim2.new(0,5,0.5,-20)
+ToggleBtn.Text = "•"
+ToggleBtn.TextSize = 22
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+ToggleBtn.TextColor3 = Color3.new(1,1,1)
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+
+-- Main Frame
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0,230,0,260)
+Frame.Position = UDim2.new(0,50,0.5,-130)
+Frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+Frame.Active = true
+Frame.Draggable = true
+
+local visible = true
+ToggleBtn.MouseButton1Click:Connect(function()
+	visible = not visible
+	Frame.Visible = visible
+end)
+
+-- Title
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1,0,0,30)
+Title.Text = "TouchFling / Auto TP"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.Sarpanch
+Title.TextSize = 22
+
+-- ================= TOUCH FLING =================
+local TouchBtn = Instance.new("TextButton", Frame)
+TouchBtn.Size = UDim2.new(0.9,0,0,35)
+TouchBtn.Position = UDim2.new(0.05,0,0,40)
+TouchBtn.Text = "TouchFling : OFF"
+TouchBtn.TextSize = 18
+TouchBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
+
+local touchOn = false
+local touchConn
+
+-- LOGIKA FLING ASLI (TIDAK DIUBAH)
+local function startTouchFling()
+	if touchConn then touchConn:Disconnect() end
+	touchConn = RunService.Heartbeat:Connect(function()
+		if not touchOn then return end
+		local char = LocalPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			local v = hrp.Velocity
+			hrp.Velocity = v * 10000 + Vector3.new(0,10000,0)
+			RunService.RenderStepped:Wait()
+			hrp.Velocity = v
+		end
+	end)
+end
+
+local function stopTouchFling()
+	if touchConn then
+		touchConn:Disconnect()
+		touchConn = nil
+	end
+	local char = LocalPlayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		hrp.Velocity = Vector3.zero
+	end
+end
+
+TouchBtn.MouseButton1Click:Connect(function()
+	touchOn = not touchOn
+	TouchBtn.Text = touchOn and "TouchFling : ON" or "TouchFling : OFF"
+	if touchOn then startTouchFling() else stopTouchFling() end
+end)
+
+-- ================= AUTO TP (+ LOOP JUMP + SMART INTERRUPT) =================
+local TargetBox = Instance.new("TextBox", Frame)
+TargetBox.Size = UDim2.new(0.9,0,0,30)
+TargetBox.Position = UDim2.new(0.05,0,0,90)
+TargetBox.PlaceholderText = "Username / ALL"
+TargetBox.TextSize = 16
+TargetBox.Text = ""
+
+local TPBtn = Instance.new("TextButton", Frame)
+TPBtn.Size = UDim2.new(0.9,0,0,35)
+TPBtn.Position = UDim2.new(0.05,0,0,130)
+TPBtn.Text = "Auto TP : OFF"
+TPBtn.TextSize = 18
+TPBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
+
+local autoTP = false
+local tpConn
+
+local function getSingleTarget(name)
+	for _,p in pairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+			if p.Name:lower():find(name:lower())
+			or (p.DisplayName and p.DisplayName:lower():find(name:lower())) then
+				return p
+			end
+		end
+	end
+end
+
+local function getAllTargets()
+	local t = {}
+	for _,p in pairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+			table.insert(t,p)
+		end
+	end
+	return t
+end
+
+local ALL_TIME = 3
+local allIndex = 1
+local lastSwitch = 0
+local currentTarget
+
+local function startTP()
+	if tpConn then tpConn:Disconnect() end
+	allIndex = 1
+	lastSwitch = tick()
+	currentTarget = nil
+
+	tpConn = RunService.Heartbeat:Connect(function()
+		if not autoTP then return end
+
+		local char = LocalPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if not hrp then return end
+
+		-- LOOP JUMP (TAMBAH FUNGSI)
+		if hum and hum.FloorMaterial ~= Enum.Material.Air then
+			hum:ChangeState(Enum.HumanoidStateType.Jumping)
+		end
+
+		local input = TargetBox.Text
+
+		-- ===== MODE ALL =====
+		if input == "ALL" then
+			local list = getAllTargets()
+			if #list == 0 then return end
+
+			if not currentTarget or tick() - lastSwitch >= ALL_TIME then
+				currentTarget = list[allIndex]
+				allIndex += 1
+				if allIndex > #list then allIndex = 1 end
+				lastSwitch = tick()
+			end
+
+			local th = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
+			if th then
+				local targetMoving = th.Velocity.Magnitude > 2
+
+				-- SMART INTERRUPT (HANYA SAAT TARGET GERAK)
+				if targetMoving and hum and hum.FloorMaterial ~= Enum.Material.Air then
+					hrp.CFrame = hrp.CFrame * CFrame.new(0, 0.15, 0)
+				end
+
+				-- OFFSET TURUN SETENGAH HRP TARGET
+				local offset = Vector3.new(0, -1, 0)
+				hrp.CFrame = th.CFrame + offset
+			end
+			return
+		end
+
+		-- ===== MODE SINGLE TARGET =====
+		if input ~= "" then
+			local t = getSingleTarget(input)
+			if t and t.Character and t.Character:FindFirstChild("HumanoidRootPart") then
+				local th = t.Character.HumanoidRootPart
+				local targetMoving = th.Velocity.Magnitude > 2
+
+				if targetMoving and hum and hum.FloorMaterial ~= Enum.Material.Air then
+					hrp.CFrame = hrp.CFrame * CFrame.new(0, 0.15, 0)
+				end
+
+				-- OFFSET TURUN SETENGAH HRP TARGET
+				local offset = Vector3.new(0, -1, 0)
+				hrp.CFrame = th.CFrame + offset
+			end
+		end
+	end)
+end
+
+TPBtn.MouseButton1Click:Connect(function()
+	autoTP = not autoTP
+	TPBtn.Text = autoTP and "Auto TP : ON" or "Auto TP : OFF"
+	if autoTP then startTP() else if tpConn then tpConn:Disconnect() end end
+end)
+
+-- ================= ANTI FLING =================
+local AntiBtn = Instance.new("TextButton", Frame)
+AntiBtn.Size = UDim2.new(0.9,0,0,35)
+AntiBtn.Position = UDim2.new(0.05,0,0,170)
+AntiBtn.Text = "Anti Fling : OFF"
+AntiBtn.TextSize = 18
+AntiBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
+
+local antiOn = false
+local antiConn
+local lastSafeVelocity = Vector3.zero
+
+local function startAntiFling()
+	if antiConn then antiConn:Disconnect() end
+	antiConn = RunService.Heartbeat:Connect(function()
+		if not antiOn then return end
+		local char = LocalPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if not hrp then return end
+		if not touchOn then lastSafeVelocity = hrp.Velocity end
+		if not touchOn and hrp.Velocity.Magnitude > 200 then
+			hrp.Velocity = lastSafeVelocity
+		end
+	end)
+end
+
+local function stopAntiFling()
+	if antiConn then antiConn:Disconnect() antiConn = nil end
+end
+
+AntiBtn.MouseButton1Click:Connect(function()
+	antiOn = not antiOn
+	AntiBtn.Text = antiOn and "Anti Fling : ON" or "Anti Fling : OFF"
+	if antiOn then startAntiFling() else stopAntiFling() end
+end)
+
+-- ================= RESPAWN SAFE =================
+LocalPlayer.CharacterAdded:Connect(function()
+	task.wait(0.5)
+	if touchOn then startTouchFling() end
+	if autoTP then startTP() end
+	if antiOn then startAntiFling() end
+end)
