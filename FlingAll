@@ -97,6 +97,7 @@ TargetBox.TextSize = 16
 TargetBox.Text = ""
 TargetBox.TextColor3 = Color3.fromRGB(0,0,0)          -- isi teks hitam
 TargetBox.PlaceholderColor3 = Color3.fromRGB(0,0,0)   -- placeholder hitam
+
 local TPBtn = Instance.new("TextButton", Frame)
 TPBtn.Size = UDim2.new(0.9,0,0,35)
 TPBtn.Position = UDim2.new(0.05,0,0,130)
@@ -149,6 +150,8 @@ OffsetX.Position = UDim2.new(0.05,0,0,240)
 OffsetX.PlaceholderText = "X"
 OffsetX.TextSize = 14
 OffsetX.Text = "0"
+OffsetX.TextColor3 = Color3.fromRGB(0,0,0)
+OffsetX.PlaceholderColor3 = Color3.fromRGB(0,0,0)
 
 local OffsetY = Instance.new("TextBox", Frame)
 OffsetY.Size = UDim2.new(0.3,0,0,25)
@@ -156,6 +159,8 @@ OffsetY.Position = UDim2.new(0.35,0,0,240)
 OffsetY.PlaceholderText = "Y"
 OffsetY.TextSize = 14
 OffsetY.Text = "0"
+OffsetY.TextColor3 = Color3.fromRGB(0,0,0)
+OffsetY.PlaceholderColor3 = Color3.fromRGB(0,0,0)
 
 local OffsetZ = Instance.new("TextBox", Frame)
 OffsetZ.Size = UDim2.new(0.3,0,0,25)
@@ -163,6 +168,8 @@ OffsetZ.Position = UDim2.new(0.65,0,0,240)
 OffsetZ.PlaceholderText = "Z"
 OffsetZ.TextSize = 14
 OffsetZ.Text = "0"
+OffsetZ.TextColor3 = Color3.fromRGB(0,0,0)
+OffsetZ.PlaceholderColor3 = Color3.fromRGB(0,0,0)
 
 local function getOffset()
     local x = tonumber(OffsetX.Text) or 0
@@ -191,49 +198,42 @@ local function startTP()
 
 		local input = TargetBox.Text
 
-		-- MODE ALL
-		if input == "ALL" then
-			local list = getAllTargets()
-			if #list == 0 then return end
+-- MODE ALL
+        if input == "ALL" then
+            local list = getAllTargets()
+            if #list == 0 then return end
 
-			if not currentTarget or tick() - lastSwitch >= ALL_TIME then
-				currentTarget = list[allIndex]
-				allIndex += 1
-				if allIndex > #list then allIndex = 1 end
-				lastSwitch = tick()
-			end
+            if not currentTarget or tick() - lastSwitch >= ALL_TIME then
+                currentTarget = list[allIndex]
+                allIndex += 1
+                if allIndex > #list then allIndex = 1 end
+                lastSwitch = tick()
+            end
 
-			local th = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
-			local humT = currentTarget.Character and currentTarget.Character:FindFirstChildOfClass("Humanoid")
-			if th then
-				if humT and humT.SeatPart then humT.Sit = false end
-				local targetMoving = th.Velocity.Magnitude > 2
-				if targetMoving and hum and hum.FloorMaterial ~= Enum.Material.Air then
-					hrp.CFrame = hrp.CFrame * CFrame.new(0,0.15,0)
-				end
-				hrp.CFrame = th.CFrame + getOffset()
-			end
-			return
-		end
+            local th = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
+            local humT = currentTarget.Character and currentTarget.Character:FindFirstChildOfClass("Humanoid")
+            if th then
+                local targetMoving = th.Velocity.Magnitude > 2
+                if targetMoving and hum and hum.FloorMaterial ~= Enum.Material.Air then
+                    hrp.CFrame = hrp.CFrame * CFrame.new(0,0.15,0)
+                end
+                hrp.CFrame = th.CFrame + getOffset()
+            end
+            return
+        end
 
--- MODE SINGLE
+        -- MODE SINGLE
         if input ~= "" then
             local t = getSingleTarget(input)
             if t and t.Character and t.Character:FindFirstChild("HumanoidRootPart") then
                 local th = t.Character.HumanoidRootPart
                 local humT = t.Character:FindFirstChildOfClass("Humanoid")
 
-                -- FIX: kalau target duduk/nyetir, paksa berdiri
-                if humT and humT.SeatPart then
-                    humT.Sit = false
-                end
-
                 local targetMoving = th.Velocity.Magnitude > 2
                 if targetMoving and hum and hum.FloorMaterial ~= Enum.Material.Air then
                     hrp.CFrame = hrp.CFrame * CFrame.new(0,0.15,0)
                 end
 
-                -- OFFSET dari GUI (X,Y,Z)
                 hrp.CFrame = th.CFrame + getOffset()
             end
         end
