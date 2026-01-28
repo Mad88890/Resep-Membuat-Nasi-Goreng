@@ -23,8 +23,8 @@ ToggleBtn.Draggable = true
 
 -- Main Frame
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0,230,0,260)
-Frame.Position = UDim2.new(0,50,0.5,-130)
+Frame.Size = UDim2.new(0,230,0,280)
+Frame.Position = UDim2.new(0,50,0.5,-140)
 Frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
 Frame.Active = true
 Frame.Draggable = true
@@ -55,7 +55,6 @@ TouchBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
 local touchOn = false
 local touchConn
 
--- LOGIKA FLING ASLI (TIDAK DIUBAH)
 local function startTouchFling()
 	if touchConn then touchConn:Disconnect() end
 	touchConn = RunService.Heartbeat:Connect(function()
@@ -89,14 +88,15 @@ TouchBtn.MouseButton1Click:Connect(function()
 	if touchOn then startTouchFling() else stopTouchFling() end
 end)
 
--- ================= AUTO TP (+ LOOP JUMP + SMART INTERRUPT) =================
+-- ================= AUTO TP =================
 local TargetBox = Instance.new("TextBox", Frame)
 TargetBox.Size = UDim2.new(0.9,0,0,30)
 TargetBox.Position = UDim2.new(0.05,0,0,90)
 TargetBox.PlaceholderText = "Username / ALL"
 TargetBox.TextSize = 16
 TargetBox.Text = ""
-
+TargetBox.TextColor3 = Color3.fromRGB(0,0,0)          -- isi teks hitam
+TargetBox.PlaceholderColor3 = Color3.fromRGB(0,0,0)   -- placeholder hitam
 local TPBtn = Instance.new("TextButton", Frame)
 TPBtn.Size = UDim2.new(0.9,0,0,35)
 TPBtn.Position = UDim2.new(0.05,0,0,130)
@@ -133,6 +133,44 @@ local allIndex = 1
 local lastSwitch = 0
 local currentTarget
 
+-- ================= OFFSET CONTROL =================
+local OffsetLabel = Instance.new("TextLabel", Frame)
+OffsetLabel.Size = UDim2.new(1,0,0,25)
+OffsetLabel.Position = UDim2.new(0,0,0,210)
+OffsetLabel.Text = "Offset HRP (X - Y - Z)"
+OffsetLabel.TextColor3 = Color3.new(1,1,1)
+OffsetLabel.BackgroundTransparency = 1
+OffsetLabel.TextSize = 16
+OffsetLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+local OffsetX = Instance.new("TextBox", Frame)
+OffsetX.Size = UDim2.new(0.3,0,0,25)
+OffsetX.Position = UDim2.new(0.05,0,0,240)
+OffsetX.PlaceholderText = "X"
+OffsetX.TextSize = 14
+OffsetX.Text = "0"
+
+local OffsetY = Instance.new("TextBox", Frame)
+OffsetY.Size = UDim2.new(0.3,0,0,25)
+OffsetY.Position = UDim2.new(0.35,0,0,240)
+OffsetY.PlaceholderText = "Y"
+OffsetY.TextSize = 14
+OffsetY.Text = "0"
+
+local OffsetZ = Instance.new("TextBox", Frame)
+OffsetZ.Size = UDim2.new(0.3,0,0,25)
+OffsetZ.Position = UDim2.new(0.65,0,0,240)
+OffsetZ.PlaceholderText = "Z"
+OffsetZ.TextSize = 14
+OffsetZ.Text = "0"
+
+local function getOffset()
+    local x = tonumber(OffsetX.Text) or 0
+    local y = tonumber(OffsetY.Text) or 0
+    local z = tonumber(OffsetZ.Text) or 0
+    return Vector3.new(x,y,z)
+end
+
 local function startTP()
 	if tpConn then tpConn:Disconnect() end
 	allIndex = 1
@@ -147,14 +185,13 @@ local function startTP()
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
 		if not hrp then return end
 
-		-- LOOP JUMP (TAMBAH FUNGSI)
 		if hum and hum.FloorMaterial ~= Enum.Material.Air then
 			hum:ChangeState(Enum.HumanoidStateType.Jumping)
 		end
 
 		local input = TargetBox.Text
 
-		-- ===== MODE ALL =====
+		-- MODE ALL
 		if input == "ALL" then
 			local list = getAllTargets()
 			if #list == 0 then return end
@@ -167,44 +204,46 @@ local function startTP()
 			end
 
 			local th = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
+			local humT = currentTarget.Character and currentTarget.Character:FindFirstChildOfClass("Humanoid")
 			if th then
+				if humT and humT.SeatPart then humT.Sit = false end
 				local targetMoving = th.Velocity.Magnitude > 2
-
-				-- SMART INTERRUPT (HANYA SAAT TARGET GERAK)
 				if targetMoving and hum and hum.FloorMaterial ~= Enum.Material.Air then
-					hrp.CFrame = hrp.CFrame * CFrame.new(0, 0.15, 0)
+					hrp.CFrame = hrp.CFrame * CFrame.new(0,0.15,0)
 				end
-
-				-- OFFSET TURUN SETENGAH HRP TARGET
-				local offset = Vector3.new(0, -1, 0)
-				hrp.CFrame = th.CFrame + offset
+				hrp.CFrame = th.CFrame + getOffset()
 			end
 			return
 		end
 
-		-- ===== MODE SINGLE TARGET =====
-		if input ~= "" then
-			local t = getSingleTarget(input)
-			if t and t.Character and t.Character:FindFirstChild("HumanoidRootPart") then
-				local th = t.Character.HumanoidRootPart
-				local targetMoving = th.Velocity.Magnitude > 2
+-- MODE SINGLE
+        if input ~= "" then
+            local t = getSingleTarget(input)
+            if t and t.Character and t.Character:FindFirstChild("HumanoidRootPart") then
+                local th = t.Character.HumanoidRootPart
+                local humT = t.Character:FindFirstChildOfClass("Humanoid")
 
-				if targetMoving and hum and hum.FloorMaterial ~= Enum.Material.Air then
-					hrp.CFrame = hrp.CFrame * CFrame.new(0, 0.15, 0)
-				end
+                -- FIX: kalau target duduk/nyetir, paksa berdiri
+                if humT and humT.SeatPart then
+                    humT.Sit = false
+                end
 
-				-- OFFSET TURUN SETENGAH HRP TARGET
-				local offset = Vector3.new(0, -1, 0)
-				hrp.CFrame = th.CFrame + offset
-			end
-		end
-	end)
+                local targetMoving = th.Velocity.Magnitude > 2
+                if targetMoving and hum and hum.FloorMaterial ~= Enum.Material.Air then
+                    hrp.CFrame = hrp.CFrame * CFrame.new(0,0.15,0)
+                end
+
+                -- OFFSET dari GUI (X,Y,Z)
+                hrp.CFrame = th.CFrame + getOffset()
+            end
+        end
+    end)
 end
 
 TPBtn.MouseButton1Click:Connect(function()
-	autoTP = not autoTP
-	TPBtn.Text = autoTP and "Auto TP : ON" or "Auto TP : OFF"
-	if autoTP then startTP() else if tpConn then tpConn:Disconnect() end end
+    autoTP = not autoTP
+    TPBtn.Text = autoTP and "Auto TP : ON" or "Auto TP : OFF"
+    if autoTP then startTP() else if tpConn then tpConn:Disconnect() end end
 end)
 
 -- ================= ANTI FLING =================
@@ -220,33 +259,33 @@ local antiConn
 local lastSafeVelocity = Vector3.zero
 
 local function startAntiFling()
-	if antiConn then antiConn:Disconnect() end
-	antiConn = RunService.Heartbeat:Connect(function()
-		if not antiOn then return end
-		local char = LocalPlayer.Character
-		local hrp = char and char:FindFirstChild("HumanoidRootPart")
-		if not hrp then return end
-		if not touchOn then lastSafeVelocity = hrp.Velocity end
-		if not touchOn and hrp.Velocity.Magnitude > 200 then
-			hrp.Velocity = lastSafeVelocity
-		end
-	end)
+    if antiConn then antiConn:Disconnect() end
+    antiConn = RunService.Heartbeat:Connect(function()
+        if not antiOn then return end
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        if not touchOn then lastSafeVelocity = hrp.Velocity end
+        if not touchOn and hrp.Velocity.Magnitude > 200 then
+            hrp.Velocity = lastSafeVelocity
+        end
+    end)
 end
 
 local function stopAntiFling()
-	if antiConn then antiConn:Disconnect() antiConn = nil end
+    if antiConn then antiConn:Disconnect() antiConn = nil end
 end
 
 AntiBtn.MouseButton1Click:Connect(function()
-	antiOn = not antiOn
-	AntiBtn.Text = antiOn and "Anti Fling : ON" or "Anti Fling : OFF"
-	if antiOn then startAntiFling() else stopAntiFling() end
+    antiOn = not antiOn
+    AntiBtn.Text = antiOn and "Anti Fling : ON" or "Anti Fling : OFF"
+    if antiOn then startAntiFling() else stopAntiFling() end
 end)
 
 -- ================= RESPAWN SAFE =================
 LocalPlayer.CharacterAdded:Connect(function()
-	task.wait(0.5)
-	if touchOn then startTouchFling() end
-	if autoTP then startTP() end
-	if antiOn then startAntiFling() end
+    task.wait(0.5)
+    if touchOn then startTouchFling() end
+    if autoTP then startTP() end
+    if antiOn then startAntiFling() end
 end)
