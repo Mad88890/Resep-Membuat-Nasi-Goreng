@@ -1,0 +1,254 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+
+local UPDATE_INTERVAL = 0.25
+local STUD_TO_METER = 0.28
+local MAX_DISTANCE_STUDS = 1000 / STUD_TO_METER
+local startTime = tick()
+local espTable = {}
+
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "System Status",
+    Text = "Interface Initialized",
+    Duration = 3
+})
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "System_Interface"
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 240, 0, 170)
+frame.Position = UDim2.new(0.5, -120, 0.08, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 25)
+title.Position = UDim2.new(0, 0, 0, 5)
+title.BackgroundTransparency = 1
+title.Text = "MONITORING SYSTEM"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.Parent = frame
+
+local miniBtn = Instance.new("TextButton")
+miniBtn.Size = UDim2.new(0, 40, 0, 40)
+miniBtn.Position = UDim2.new(0.02, 0, 0.08, 0)
+miniBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+miniBtn.BorderSizePixel = 0
+miniBtn.Text = "≡"
+miniBtn.TextColor3 = Color3.new(1, 1, 1)
+miniBtn.Font = Enum.Font.GothamBold
+miniBtn.TextSize = 24
+miniBtn.Active = true
+miniBtn.Draggable = true
+miniBtn.Parent = gui
+Instance.new("UICorner", miniBtn).CornerRadius = UDim.new(0, 8)
+
+local guiVisible = true
+miniBtn.MouseButton1Click:Connect(function()
+    guiVisible = not guiVisible
+    frame.Visible = guiVisible
+end)
+
+local statusFrame = Instance.new("Frame")
+statusFrame.Size = UDim2.new(1, 0, 0, 55)
+statusFrame.Position = UDim2.new(0, 0, 0, 35)
+statusFrame.BackgroundTransparency = 1
+statusFrame.Parent = frame
+
+local function createLabel(name, posX)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.33, 0, 0, 20)
+    lbl.Position = UDim2.new(posX, 0, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3 = Color3.new(1, 1, 1)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 14
+    lbl.Text = name
+    lbl.Parent = statusFrame
+    return lbl
+end
+
+local function createValue(default, posX)
+    local val = Instance.new("TextLabel")
+    val.Size = UDim2.new(0.33, 0, 0, 25)
+    val.Position = UDim2.new(posX, 0, 0, 20)
+    val.BackgroundTransparency = 1
+    val.TextColor3 = Color3.fromRGB(0, 255, 100)
+    val.Font = Enum.Font.GothamBold
+    val.TextSize = 18
+    val.Text = default
+    val.Parent = statusFrame
+    return val
+end
+
+local fpsText = createLabel("FPS", 0)
+local timeText = createLabel("TIME", 0.33)
+local pingText = createLabel("PING", 0.66)
+
+local fpsValue = createValue("0", 0)
+local timeValue = createValue("00:00", 0.33)
+local pingValue = createValue("0ms", 0.66)
+
+local resetBtn = Instance.new("TextButton")
+resetBtn.Size = UDim2.new(0.2, 0, 0, 25)
+resetBtn.Position = UDim2.new(0.4, 0, 0, 95)
+resetBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 50)
+resetBtn.BorderSizePixel = 0
+resetBtn.Text = "RESET"
+resetBtn.TextColor3 = Color3.new(1, 1, 1)
+resetBtn.Font = Enum.Font.GothamBold
+resetBtn.TextSize = 14
+resetBtn.Parent = frame
+Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0, 5)
+
+local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0)
+local normalSize = resetBtn.Size
+local clickSize = UDim2.new(0.18, 0, 0, 22)
+
+resetBtn.MouseButton1Click:Connect(function()
+    local tweenDown = TweenService:Create(resetBtn, tweenInfo, {Size = clickSize})
+    local tweenUp = TweenService:Create(resetBtn, tweenInfo, {Size = normalSize})
+    tweenDown:Play()
+    tweenDown.Completed:Wait()
+    tweenUp:Play()
+    startTime = tick()
+end)
+
+local espEnabled = false
+local espBtn = Instance.new("TextButton")
+espBtn.Size = resetBtn.Size
+espBtn.Position = resetBtn.Position + UDim2.new(0, 0, 0, 36)
+espBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+espBtn.TextColor3 = Color3.new(1, 1, 1)
+espBtn.Font = Enum.Font.GothamBold
+espBtn.TextSize = 14
+espBtn.Text = "ESP: OFF"
+espBtn.Parent = frame
+Instance.new("UICorner", espBtn).CornerRadius = UDim.new(0, 5)
+
+espBtn.MouseButton1Click:Connect(function()
+    local tweenDown = TweenService:Create(espBtn, tweenInfo, {Size = clickSize})
+    local tweenUp = TweenService:Create(espBtn, tweenInfo, {Size = normalSize})
+    tweenDown:Play()
+    tweenDown.Completed:Wait()
+    tweenUp:Play()
+    
+    espEnabled = not espEnabled
+    if espEnabled then
+        espBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 50)
+        espBtn.Text = "ESP: ON"
+    else
+        espBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        espBtn.Text = "ESP: OFF"
+    end
+
+    for _, e in pairs(espTable) do
+        if e.gui then e.gui.Enabled = espEnabled end
+    end
+end)
+
+task.spawn(function()
+    local last = tick()
+    local frames = 0
+    while true do
+        frames = frames + 1
+        local now = tick()
+        if now - last >= 1 then
+            local fps = math.min(frames, 375)
+            fpsValue.Text = tostring(fps)
+            if fps < 15 then fpsValue.TextColor3 = Color3.fromRGB(255, 0, 0)
+            elseif fps < 60 then fpsValue.TextColor3 = Color3.fromRGB(255, 255, 0)
+            else fpsValue.TextColor3 = Color3.fromRGB(0, 255, 100) end
+            frames = 0
+            last = now
+        end
+
+        local elapsed = math.floor(tick() - startTime)
+        if elapsed < 3600 then
+            timeValue.Text = string.format("%02d:%02d", math.floor(elapsed / 60), elapsed % 60)
+        else
+            timeValue.Text = string.format("%02d:%02d:%02d", math.floor(elapsed / 3600), math.floor((elapsed % 3600) / 60), elapsed % 60)
+        end
+
+        local ping = math.min(math.floor(LocalPlayer:GetNetworkPing() * 1000), 999)
+        pingValue.Text = ping .. "ms"
+        if ping > 500 then pingValue.TextColor3 = Color3.fromRGB(255, 0, 0)
+        elseif ping > 100 then pingValue.TextColor3 = Color3.fromRGB(255, 255, 0)
+        else pingValue.TextColor3 = Color3.fromRGB(0, 255, 0) end
+        task.wait()
+    end
+end)
+
+local function removeESP(player)
+    if espTable[player] then
+        espTable[player].gui:Destroy()
+        espTable[player] = nil
+    end
+end
+
+local function createESP(player)
+    if player == LocalPlayer or espTable[player] then return end
+    local function onCharacter(character)
+        removeESP(player)
+        local head = character:WaitForChild("Head", 5)
+        if not head then return end
+        local bg = Instance.new("BillboardGui")
+        bg.Size = UDim2.new(0, 220, 0, 55)
+        bg.StudsOffset = Vector3.new(0, 2.7, 0)
+        bg.AlwaysOnTop = true
+        bg.Enabled = espEnabled
+        bg.Parent = head
+        local txt = Instance.new("TextLabel")
+        txt.Size = UDim2.new(1, 0, 1, 0)
+        txt.BackgroundTransparency = 1
+        txt.TextScaled = true
+        txt.Font = Enum.Font.GothamBold
+        txt.TextColor3 = Color3.fromRGB(0, 255, 100)
+        txt.TextStrokeTransparency = 0.2
+        txt.Parent = bg
+        espTable[player] = {gui = bg, label = txt}
+    end
+    if player.Character then onCharacter(player.Character) end
+    player.CharacterAdded:Connect(onCharacter)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(UPDATE_INTERVAL)
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+        for p, e in pairs(espTable) do
+            local trp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+            if trp then
+                local d = (hrp.Position - trp.Position).Magnitude
+                if d <= MAX_DISTANCE_STUDS then
+                    e.gui.Enabled = espEnabled
+                    e.label.Text = string.format("%s (@%s)\n[%d m]", p.DisplayName, p.Name, math.floor(d * STUD_TO_METER))
+                else e.gui.Enabled = false end
+            else e.gui.Enabled = false end
+        end
+    end
+end)
+
+LocalPlayer.Idled:Connect(function()
+    game:GetService("VirtualUser"):CaptureController()
+    game:GetService("VirtualUser"):ClickButton1(Vector2.new(0, 0))
+end)
+
+for _, p in ipairs(Players:GetPlayers()) do createESP(p) end
+Players.PlayerAdded:Connect(createESP)
+Players.PlayerRemoving:Connect(removeESP)
