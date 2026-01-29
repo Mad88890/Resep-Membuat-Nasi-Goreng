@@ -1,0 +1,208 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local tunnelEvent = nil
+for _, v in pairs(game:GetDescendants()) do
+    if v:IsA("RemoteEvent") then
+        tunnelEvent = v
+        break
+    end
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = ""
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+local MainContainer = Instance.new("Frame")
+MainContainer.Size = UDim2.new(0, 320, 0, 260)
+MainContainer.Position = UDim2.new(0.1, 0, 0.2, 0)
+MainContainer.BackgroundTransparency = 1
+MainContainer.Active = false
+MainContainer.Parent = ScreenGui
+
+local function makeDraggable(dragPart, objectToMove)
+    local dragging, dragInput, dragStart, startPos
+    dragPart.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = objectToMove.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    dragPart.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            objectToMove.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 100, 0, 35)
+ToggleBtn.Position = UDim2.new(0.5, -50, 0, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+ToggleBtn.Text = "CLOSE"
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.ZIndex = 50
+ToggleBtn.Parent = MainContainer
+Instance.new("UICorner", ToggleBtn)
+makeDraggable(ToggleBtn, MainContainer)
+
+local ChatFrame = Instance.new("Frame")
+ChatFrame.Size = UDim2.new(1, 0, 0.85, 0)
+ChatFrame.Position = UDim2.new(0, 0, 0, 40)
+ChatFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ChatFrame.BackgroundTransparency = 0.4
+ChatFrame.ClipsDescendants = true
+ChatFrame.ZIndex = 1
+ChatFrame.Parent = MainContainer
+Instance.new("UICorner", ChatFrame)
+
+local InfoBtn = Instance.new("TextButton")
+InfoBtn.Size = UDim2.new(0, 22, 0, 22)
+InfoBtn.Position = UDim2.new(1, -28, 0, 6)
+InfoBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+InfoBtn.Text = "i"
+InfoBtn.TextColor3 = Color3.new(1, 1, 1)
+InfoBtn.Font = Enum.Font.SourceSansItalic
+InfoBtn.ZIndex = 10
+InfoBtn.Parent = ChatFrame
+Instance.new("UICorner", InfoBtn).CornerRadius = UDim.new(1, 0)
+
+local InfoBox = Instance.new("Frame")
+InfoBox.Size = UDim2.new(0, 0, 0, 0)
+InfoBox.Position = UDim2.new(1, -30, 0, 30)
+InfoBox.AnchorPoint = Vector2.new(1, 0)
+InfoBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+InfoBox.BorderSizePixel = 0
+InfoBox.ClipsDescendants = true
+InfoBox.ZIndex = 100
+InfoBox.Parent = ChatFrame
+Instance.new("UICorner", InfoBox)
+
+local InfoText = Instance.new("TextLabel")
+InfoText.Size = UDim2.new(1, -20, 1, -20)
+InfoText.Position = UDim2.new(0, 10, 0, 10)
+InfoText.BackgroundTransparency = 1
+InfoText.TextColor3 = Color3.fromRGB(255, 255, 255)
+InfoText.Text = "This chat system only works between players using this script. Thank you!"
+InfoText.TextWrapped = true
+InfoText.Font = Enum.Font.SourceSansBold
+InfoText.TextSize = 14
+InfoText.ZIndex = 101
+InfoText.Parent = InfoBox
+
+local ChatLog = Instance.new("ScrollingFrame")
+ChatLog.Size = UDim2.new(1, -10, 0.75, 0)
+ChatLog.Position = UDim2.new(0, 5, 0, 10)
+ChatLog.BackgroundTransparency = 1
+ChatLog.BorderSizePixel = 0
+ChatLog.ScrollBarThickness = 4 
+ChatLog.CanvasSize = UDim2.new(0, 0, 0, 0)
+ChatLog.AutomaticCanvasSize = Enum.AutomaticSize.Y
+local UIList = Instance.new("UIListLayout", ChatLog)
+UIList.VerticalAlignment = Enum.VerticalAlignment.Top 
+ChatLog.Parent = ChatFrame
+
+local InputBar = Instance.new("Frame")
+InputBar.Size = UDim2.new(1, -20, 0, 35)
+InputBar.Position = UDim2.new(0, 10, 1, -45)
+InputBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+InputBar.Parent = ChatFrame
+Instance.new("UICorner", InputBar)
+
+local ChatInput = Instance.new("TextBox")
+ChatInput.Size = UDim2.new(1, -45, 1, 0)
+ChatInput.Position = UDim2.new(0, 10, 0, 0)
+ChatInput.BackgroundTransparency = 1
+ChatInput.TextColor3 = Color3.new(1, 1, 1)
+ChatInput.TextXAlignment = Enum.TextXAlignment.Left
+ChatInput.PlaceholderText = "Type Here..."
+ChatInput.Text = ""
+ChatInput.Parent = InputBar
+
+local SendBtn = Instance.new("TextButton")
+SendBtn.Size = UDim2.new(0, 30, 0, 30)
+SendBtn.Position = UDim2.new(1, -35, 0.5, -15)
+SendBtn.BackgroundTransparency = 1
+SendBtn.Text = ">"
+SendBtn.TextColor3 = Color3.new(1, 1, 1)
+SendBtn.TextSize = 25
+SendBtn.Font = Enum.Font.SourceSansBold
+SendBtn.Parent = InputBar
+
+local infoOpen = false
+InfoBtn.MouseButton1Click:Connect(function()
+    infoOpen = not infoOpen
+    if infoOpen then
+        InfoBox:TweenSize(UDim2.new(0.8, 0, 0.4, 0), "Out", "Quart", 0.3, true)
+    else
+        InfoBox:TweenSize(UDim2.new(0, 0, 0, 0), "In", "Quart", 0.3, true)
+    end
+end)
+
+local isHidden = false
+local originalChatSize = ChatFrame.Size
+local originalChatPos = ChatFrame.Position
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    isHidden = not isHidden
+    if isHidden then
+        -- Animasi menggulung ke arah tengah tombol
+        ChatFrame:TweenSizeAndPosition(UDim2.new(0, 0, 0, 0), UDim2.new(0.5, 0, 0, 17), "Out", "Quart", 0.4, true)
+        ToggleBtn.Text = "OPEN"
+        infoOpen = false
+        InfoBox.Size = UDim2.new(0,0,0,0)
+    else
+        -- Membuka kembali
+        ChatFrame:TweenSizeAndPosition(originalChatSize, originalChatPos, "Out", "Back", 0.4, true)
+        ToggleBtn.Text = "CLOSE"
+    end
+end)
+
+local function sendMessage()
+    if ChatInput.Text ~= "" then
+        local msg = ChatInput.Text
+        ChatInput.Text = ""
+        pcall(function() tunnelEvent:FireServer({Type = "PrivateChat", Sender = Players.LocalPlayer.Name, Message = msg}) end)
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 0, 0); label.AutomaticSize = Enum.AutomaticSize.Y; label.BackgroundTransparency = 1
+        label.Font = Enum.Font.SourceSansBold; label.TextSize = 16; label.TextColor3 = Color3.new(1, 1, 1)
+        label.TextXAlignment = Enum.TextXAlignment.Left; label.RichText = true; label.TextWrapped = true
+        label.Text = string.format("<font color='#3498db'>%s</font>: %s", Players.LocalPlayer.Name, msg)
+        label.Parent = ChatLog
+        task.wait(0.1); ChatLog.CanvasPosition = Vector2.new(0, ChatLog.AbsoluteContentSize.Y)
+    end
+end
+
+SendBtn.MouseButton1Click:Connect(sendMessage)
+ChatInput.FocusLost:Connect(function(enter) if enter then sendMessage() end end)
+
+if tunnelEvent then
+    tunnelEvent.OnClientEvent:Connect(function(data)
+        if typeof(data) == "table" and data.Type == "PrivateChat" then
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, 0, 0, 0); label.AutomaticSize = Enum.AutomaticSize.Y; label.BackgroundTransparency = 1
+            label.Font = Enum.Font.SourceSansBold; label.TextSize = 16; label.TextColor3 = Color3.new(1, 1, 1)
+            label.TextXAlignment = Enum.TextXAlignment.Left; label.RichText = true; label.TextWrapped = true
+            label.Text = string.format("<font color='#3498db'>%s</font>: %s", data.Sender, data.Message)
+            label.Parent = ChatLog
+            task.wait(0.1); ChatLog.CanvasPosition = Vector2.new(0, ChatLog.AbsoluteContentSize.Y)
+        end
+    end)
+end
