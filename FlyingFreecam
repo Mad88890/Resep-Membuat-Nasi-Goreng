@@ -1,0 +1,247 @@
+local plr = game.Players.LocalPlayer
+local char = plr.Character or plr.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+local uis = game:GetService("UserInputService")
+local rs = game:GetService("RunService")
+
+local flying = false
+local freecamMode = false
+local moveSpeed = 2
+local verticalSpeed = 1
+local height = 5
+local cameraOffsetY = 4
+local cameraDistance = 10
+local minZoom, maxZoom = 5, 25
+local startPos = nil
+local float = nil
+
+-- GUI utama
+local gui = Instance.new("ScreenGui", plr.PlayerGui)
+gui.AutoLocalize = false
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,200,0,100)
+frame.Position = UDim2.new(0,10,0,10)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+
+-- Drag manual untuk PC + Mobile
+local dragging = false
+local dragStart, startPosFrame
+local function update(input)
+    local delta = input.Position - dragStart
+    frame.Position = UDim2.new(
+        startPosFrame.X.Scale, startPosFrame.X.Offset + delta.X,
+        startPosFrame.Y.Scale, startPosFrame.Y.Offset + delta.Y
+    )
+end
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPosFrame = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+frame.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement 
+    or input.UserInputType == Enum.UserInputType.Touch) then
+        update(input)
+    end
+end)
+
+local speedBox = Instance.new("TextBox", frame)
+speedBox.Size = UDim2.new(0,180,0,30)
+speedBox.Position = UDim2.new(0,10,0,10)
+speedBox.Text = tostring(moveSpeed)
+speedBox.TextColor3 = Color3.new(1,1,1)
+speedBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+local toggleBtn = Instance.new("TextButton", frame)
+toggleBtn.Size = UDim2.new(0,180,0,30)
+toggleBtn.Position = UDim2.new(0,10,0,50)
+toggleBtn.Text = "Fly: OFF"
+toggleBtn.TextColor3 = Color3.new(1,1,1)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(70,70,70)
+
+-- Frame joystick kiri bawah
+local joystickFrame = Instance.new("Frame", gui)
+joystickFrame.Size = UDim2.new(0,170,0,170)
+joystickFrame.Position = UDim2.new(0,10,1,-180)
+joystickFrame.BackgroundTransparency = 1
+joystickFrame.Visible = false
+
+-- Frame naik/turun kanan bawah
+local verticalFrame = Instance.new("Frame", gui)
+verticalFrame.Size = UDim2.new(0,100,0,120)
+verticalFrame.Position = UDim2.new(1,-110,1,-180)
+verticalFrame.BackgroundTransparency = 1
+verticalFrame.Visible = false
+
+-- Fungsi buat tombol
+local function makeBtn(parent,txt,x,y,w,h)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(0,w,0,h)
+    b.Position = UDim2.new(0,x,0,y)
+    b.Text = txt
+    b.BackgroundColor3 = Color3.fromRGB(70,70,70)
+    return b
+end
+
+-- Joystick arah
+local wBtn = makeBtn(joystickFrame,"^",60,10,50,50)
+local sBtn = makeBtn(joystickFrame,"v",60,110,50,50)
+local aBtn = makeBtn(joystickFrame,"<",10,60,50,50)
+local dBtn = makeBtn(joystickFrame,">",110,60,50,50)
+local centerBtn = makeBtn(joystickFrame,"TP",60,60,50,50)
+centerBtn.TextColor3 = Color3.new(1,1,1)
+centerBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+
+-- Tombol naik/turun
+local upBtn = makeBtn(verticalFrame,"UP",0,0,100,50)
+local downBtn = makeBtn(verticalFrame,"DOWN",0,60,100,50)
+
+-- Flag kontrol
+local wHeld,aHeld,sHeld,dHeld = false,false,false,false
+local upHeld,downHeld = false,false
+
+wBtn.MouseButton1Down:Connect(function() wHeld = true end)
+wBtn.MouseButton1Up:Connect(function() wHeld = false end)
+sBtn.MouseButton1Down:Connect(function() sHeld = true end)
+sBtn.MouseButton1Up:Connect(function() sHeld = false end)
+aBtn.MouseButton1Down:Connect(function() aHeld = true end)
+aBtn.MouseButton1Up:Connect(function() aHeld = false end)
+dBtn.MouseButton1Down:Connect(function() dHeld = true end)
+dBtn.MouseButton1Up:Connect(function() dHeld = false end)
+
+upBtn.MouseButton1Down:Connect(function() upHeld = true end)
+upBtn.MouseButton1Up:Connect(function() upHeld = false end)
+downBtn.MouseButton1Down:Connect(function() downHeld = true end)
+downBtn.MouseButton1Up:Connect(function() downHeld = false end)
+
+-- Fungsi clean-up karakter
+local function cleanCharacter()
+    if hrp then
+        hrp.Velocity = Vector3.new(0,0,0)
+        hrp.RotVelocity = Vector3.new(0,0,0)
+        hrp.CFrame = CFrame.new(hrp.Position)
+        hrp.Anchored = true
+        task.delay(0.1, function()
+            if hrp then hrp.Anchored = false end
+        end)
+    end
+end
+
+-- Toggle fly
+toggleBtn.MouseButton1Click:Connect(function()
+    flying = not flying
+    toggleBtn.Text = flying and "Fly: ON" or "Fly: OFF"
+    joystickFrame.Visible = flying
+    verticalFrame.Visible = flying
+
+    if flying then
+        startPos = hrp.Position
+        freecamMode = false
+        centerBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+
+        if not float or not float.Parent then
+            float = Instance.new("Part")
+            float.Size = Vector3.new(4,1,4)
+            float.Anchored = true
+            float.CanCollide = false
+            float.Massless = true
+            float.Transparency = 1
+            float.Parent = workspace
+        end
+        float.Position = hrp.Position + Vector3.new(0,height,0)
+
+        workspace.CurrentCamera.CameraSubject = float
+    else
+        if float and float.Parent then
+            float:Destroy()
+            float = nil
+        end
+        cleanCharacter()
+        workspace.CurrentCamera.CameraSubject = char:FindFirstChild("Humanoid")
+    end
+end)
+
+-- Tombol TP toggle bolak-balik
+centerBtn.MouseButton1Click:Connect(function()
+    if startPos and char and hrp then
+        if not freecamMode then
+            freecamMode = true
+            hrp.CFrame = CFrame.new(startPos)
+            cleanCharacter()
+            centerBtn.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        else
+            freecamMode = false
+            if float and float.Parent then
+                hrp.CFrame = CFrame.new(
+                    float.Position + Vector3.new(0,height,0),
+                    float.Position + workspace.CurrentCamera.CFrame.LookVector*10
+                )
+                cleanCharacter()
+            end
+            centerBtn.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        end
+    end
+end)
+
+-- Input speed
+speedBox.FocusLost:Connect(function()
+    local val = tonumber(speedBox.Text)
+    if val then moveSpeed = val end
+end)
+
+-- Zoom in/out
+uis.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        cameraDistance = math.clamp(cameraDistance - input.Position.Z, minZoom, maxZoom)
+    elseif input.UserInputType == Enum.UserInputType.Touch and input.UserInputState == Enum.UserInputState.Change then
+        if input.Scale then
+            cameraDistance = math.clamp(cameraDistance / input.Scale, minZoom, maxZoom)
+        end
+    end
+end)
+
+-- Loop fly
+rs.RenderStepped:Connect(function()
+    if flying and float and float.Parent then
+        local move = Vector3.new()
+
+        if uis:IsKeyDown(Enum.KeyCode.W) or wHeld then move += workspace.CurrentCamera.CFrame.LookVector end
+        if uis:IsKeyDown(Enum.KeyCode.S) or sHeld then move -= workspace.CurrentCamera.CFrame.LookVector end
+        if uis:IsKeyDown(Enum.KeyCode.A) or aHeld then move -= workspace.CurrentCamera.CFrame.RightVector end
+        if uis:IsKeyDown(Enum.KeyCode.D) or dHeld then move += workspace.CurrentCamera.CFrame.RightVector end
+
+        if upHeld then float.Position += Vector3.new(0, verticalSpeed, 0) end
+        if downHeld then float.Position -= Vector3.new(0, verticalSpeed, 0) end
+
+        float.Position += move * moveSpeed
+
+        -- Kamera ikut float: naik offset Y + mundur ke belakang sesuai cameraDistance
+        local camTarget = float.Position + Vector3.new(0,height + cameraOffsetY,0)
+        workspace.CurrentCamera.CFrame = CFrame.new(
+            camTarget - workspace.CurrentCamera.CFrame.LookVector * cameraDistance,
+            camTarget
+        )
+
+        -- Karakter ditempel ke float hanya kalau bukan freecam
+        if not freecamMode then
+            hrp.CFrame = CFrame.new(
+                float.Position + Vector3.new(0,height,0),
+                float.Position + workspace.CurrentCamera.CFrame.LookVector*10
+            )
+        end
+    end
+end)
+
+-- Respawn handling
+plr.CharacterAdded:Connect(function(newChar)
+    char = newChar
+    hrp = char:WaitForChild("HumanoidRootPart")
+end)
