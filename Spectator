@@ -1,0 +1,255 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+
+local runDummyScript = function(f, scri)
+    local oldenv = getfenv(f)
+    local newenv = setmetatable({}, {
+        __index = function(_, k)
+            if k:lower() == 'script' then
+                return scri
+            else
+                return oldenv[k]
+            end
+        end
+    })
+    setfenv(f, newenv)
+    ypcall(function() f() end)
+end
+
+cors = {}
+mas = Instance.new("Model", game:GetService("Lighting")) 
+mas.Name = "CompiledModel"
+
+o1 = Instance.new("ScreenGui")
+o1.Name = "SpectateGui"
+o1.ResetOnSpawn = false
+o1.Parent = mas
+
+o2 = Instance.new("Frame")
+o2.Name = "Bar"
+o2.Parent = o1
+o2.Position = UDim2.new(-1, -100, 0.85, -25)
+o2.Size = UDim2.new(0, 220, 0, 50)
+o2.BackgroundColor3 = Color3.new(0, 0, 0)
+o2.BackgroundTransparency = 0.3
+o2.BorderSizePixel = 0
+
+o3 = Instance.new("TextButton")
+o3.Name = "Previous"
+o3.Parent = o2
+o3.Size = UDim2.new(0.2, 0, 1, 0)
+o3.Text = "<"
+o3.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+o3.Font = Enum.Font.SourceSansBold
+o3.TextSize = 30
+o3.TextColor3 = Color3.fromRGB(0, 255, 0)
+o3.BorderSizePixel = 0
+
+o4 = Instance.new("TextButton")
+o4.Name = "Next"
+o4.Parent = o2
+o4.Position = UDim2.new(0.8, 0, 0, 0)
+o4.Size = UDim2.new(0.2, 0, 1, 0)
+o4.Text = ">"
+o4.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+o4.Font = Enum.Font.SourceSansBold
+o4.TextSize = 30
+o4.TextColor3 = Color3.fromRGB(0, 255, 0)
+o4.BorderSizePixel = 0
+
+o5 = Instance.new("TextLabel")
+o5.Name = "Title"
+o5.Parent = o2
+o5.Position = UDim2.new(0.2, 0, 0, 0)
+o5.Size = UDim2.new(0.6, 0, 1, 0)
+o5.BackgroundTransparency = 1
+o5.Font = Enum.Font.SourceSansSemibold
+o5.Text = "Spectating"
+o5.TextColor3 = Color3.new(1, 1, 1)
+o5.TextScaled = true
+
+o6 = Instance.new("ImageButton")
+o6.Name = "Button"
+o6.Parent = o1
+o6.Position = UDim2.new(1, -70, 0.05, 0)
+o6.Size = UDim2.new(0, 55, 0, 55)
+o6.BackgroundColor3 = Color3.new(0, 0, 0)
+o6.BackgroundTransparency = 0.4
+o6.Image = "http://www.roblox.com/asset/?id=176106970"
+o6.ImageColor3 = Color3.fromRGB(0, 255, 0)
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(1, 0)
+uiCorner.Parent = o6
+
+local dragging, dragStart, startPos
+o6.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = o6.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        o6.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+o7 = Instance.new("LocalScript")
+o7.Parent = o1
+
+table.insert(cors, coroutine.create(function()
+    runDummyScript(function()
+        local cam = workspace.CurrentCamera
+        local bar = script.Parent.Bar
+        local title = bar.Title
+        local spectating = false
+        local index = 1
+        local charConn, renderConn
+
+        local hl = Instance.new("Highlight")
+        hl.FillTransparency = 1
+        hl.OutlineColor = Color3.fromRGB(0, 255, 0)
+        hl.OutlineTransparency = 0
+
+        local esp = Instance.new("BillboardGui")
+        esp.Size = UDim2.new(0, 200, 0, 70)
+        esp.AlwaysOnTop = true
+        esp.ExtentsOffset = Vector3.new(0, 3.5, 0)
+        
+        local nameLabel = Instance.new("TextLabel", esp)
+        nameLabel.Size = UDim2.new(1, 0, 0.4, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        nameLabel.TextStrokeTransparency = 0
+        nameLabel.Font = Enum.Font.SourceSansBold
+        nameLabel.TextSize = 18
+
+        local distLabel = Instance.new("TextLabel", esp)
+        distLabel.Position = UDim2.new(0, 0, 0.4, 0)
+        distLabel.Size = UDim2.new(1, 0, 0.3, 0)
+        distLabel.BackgroundTransparency = 1
+        distLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        distLabel.TextStrokeTransparency = 0.5
+        distLabel.Font = Enum.Font.SourceSans
+        distLabel.TextSize = 16
+
+        local playersList = {} -- keep list of spectatable players
+
+        local function updatePlayersList()
+            playersList = {}
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= lp then
+                    table.insert(playersList, p)
+                end
+            end
+            if index > #playersList then
+                index = #playersList
+            end
+        end
+
+        updatePlayersList()
+
+        Players.PlayerAdded:Connect(function()
+            updatePlayersList() -- update list in background
+        end)
+
+        Players.PlayerRemoving:Connect(function()
+            updatePlayersList() -- update list in background
+        end)
+
+        local function focus(target)
+            if charConn then charConn:Disconnect() end
+            if renderConn then renderConn:Disconnect() end
+            
+            if not target or not target.Parent then
+                if #playersList > 0 then
+                    index = 1
+                    focus(playersList[index])
+                else
+                    spectating = false
+                    bar:TweenPosition(UDim2.new(-1, -100, 0.85, -25), "In", "Quad", 0.3) 
+                end
+                return
+            end
+
+            local function update()
+                local char = target.Character or target.CharacterAdded:Wait()
+                local hum = char:WaitForChild("Humanoid", 5)
+                local root = char:WaitForChild("HumanoidRootPart", 5)
+                if hum and root then
+                    cam.CameraSubject = hum
+                    title.Text = target.Name
+                    hl.Parent = char
+                    esp.Parent = char
+                    esp.Adornee = root
+                    nameLabel.Text = target.Name .. " | " .. target.DisplayName
+                    
+                    renderConn = RunService.RenderStepped:Connect(function()
+                        if spectating and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") and root.Parent then
+                            local dist = (lp.Character.HumanoidRootPart.Position - root.Position).Magnitude
+                            distLabel.Text = math.floor(dist) .. " Studs"
+                        else
+                            distLabel.Text = ""
+                        end
+                    end)
+                end
+            end
+            update()
+            charConn = target.CharacterAdded:Connect(function() task.wait(0.5) if spectating then update() end end)
+        end
+
+        o6.MouseButton1Click:Connect(function()
+            spectating = not spectating
+            if spectating then
+                bar:TweenPosition(UDim2.new(0.5, -110, 0.85, -25), "Out", "Quad", 0.3, true)
+                updatePlayersList()
+                if #playersList > 0 then
+                    if index < 1 or index > #playersList then
+                        index = 1
+                    end
+                    focus(playersList[index])
+                end
+            else
+                if charConn then charConn:Disconnect() end
+                if renderConn then renderConn:Disconnect() end
+                hl.Parent = nil
+                esp.Parent = nil
+                bar:TweenPosition(UDim2.new(-1, -100, 0.85, -25), "In", "Quad", 0.3, true)
+                if lp.Character then
+                    cam.CameraSubject = lp.Character:FindFirstChildOfClass("Humanoid")
+                end
+            end
+        end)
+
+        o2.Previous.MouseButton1Click:Connect(function()
+            if #playersList <= 0 then return end
+            index = index - 1
+            if index < 1 then index = #playersList end
+            focus(playersList[index])
+        end)
+
+        o2.Next.MouseButton1Click:Connect(function()
+            if #playersList <= 0 then return end
+            index = index + 1
+            if index > #playersList then index = 1 end
+            focus(playersList[index])
+        end)
+    end, o7)
+end))
+
+mas.Parent = workspace
+local mas1 = mas:GetChildren()
+for i = 1, #mas1 do
+    mas1[i].Parent = lp:WaitForChild("PlayerGui")
+end
+mas:Destroy()
+for i = 1, #cors do coroutine.resume(cors[i]) end
