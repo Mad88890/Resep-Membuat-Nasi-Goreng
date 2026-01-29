@@ -1,4 +1,4 @@
--- FINAL KOMBO TOUCHFLING + AUTO TP (+ LOOP JUMP + SMART INTERRUPT) + ANTI FLING
+-- FINAL KOMBO TOUCHFLING + AUTO TP (+ LOOP JUMP + SMART INTERRUPT) + ANTI TELEPORT
 -- Stable | Respawn Safe | No Conflict | LOGIKA FLING ASLI
 
 local Players = game:GetService("Players")
@@ -95,8 +95,8 @@ TargetBox.Position = UDim2.new(0.05,0,0,90)
 TargetBox.PlaceholderText = "Username / ALL"
 TargetBox.TextSize = 16
 TargetBox.Text = ""
-TargetBox.TextColor3 = Color3.fromRGB(0,0,0)          -- isi teks hitam
-TargetBox.PlaceholderColor3 = Color3.fromRGB(0,0,0)   -- placeholder hitam
+TargetBox.TextColor3 = Color3.fromRGB(0,0,0)
+TargetBox.PlaceholderColor3 = Color3.fromRGB(0,0,0)
 
 local TPBtn = Instance.new("TextButton", Frame)
 TPBtn.Size = UDim2.new(0.9,0,0,35)
@@ -198,7 +198,7 @@ local function startTP()
 
 		local input = TargetBox.Text
 
--- MODE ALL
+        -- MODE ALL
         if input == "ALL" then
             local list = getAllTargets()
             if #list == 0 then return end
@@ -240,46 +240,94 @@ local function startTP()
     end)
 end
 
-TPBtn.MouseButton1Click:Connect(function()
-    autoTP = not autoTP
-    TPBtn.Text = autoTP and "Auto TP : ON" or "Auto TP : OFF"
-    if autoTP then startTP() else if tpConn then tpConn:Disconnect() end end
-end)
 
--- ================= ANTI FLING =================
+
+-- ================= ANTI TELEPORT =================
 local AntiBtn = Instance.new("TextButton", Frame)
 AntiBtn.Size = UDim2.new(0.9,0,0,35)
 AntiBtn.Position = UDim2.new(0.05,0,0,170)
-AntiBtn.Text = "Anti Fling : OFF"
+AntiBtn.Text = "Anti Teleport : OFF"
 AntiBtn.TextSize = 18
 AntiBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
 
-local antiOn = false
-local antiConn
-local lastSafeVelocity = Vector3.zero
+local players = game:GetService('Players')
+local lplr = players.LocalPlayer
+local lastCF, stop, heartbeatConnection
+local antiTPOn = false
 
-local function startAntiFling()
-    if antiConn then antiConn:Disconnect() end
-    antiConn = RunService.Heartbeat:Connect(function()
-        if not antiOn then return end
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        if not touchOn then lastSafeVelocity = hrp.Velocity end
-        if not touchOn and hrp.Velocity.Magnitude > 200 then
-            hrp.Velocity = lastSafeVelocity
-        end
+local function startAntiTP()
+    heartbeatConnection = game:GetService('RunService').Heartbeat:Connect(function()
+        if stop then return end 
+        lastCF = lplr.Character:FindFirstChildOfClass('Humanoid').RootPart.CFrame
+    end)
+    lplr.Character:FindFirstChildOfClass('Humanoid').RootPart:GetPropertyChangedSignal('CFrame'):Connect(function()
+        if not antiTPOn then return end
+        stop = true
+        lplr.Character:FindFirstChildOfClass('Humanoid').RootPart.CFrame = lastCF
+        game:GetService('RunService').Heartbeat:Wait()
+        stop = false
+    end)    
+    lplr.Character:FindFirstChildOfClass('Humanoid').Died:Connect(function()
+        if heartbeatConnection then heartbeatConnection:Disconnect() heartbeatConnection=nil end
     end)
 end
 
-local function stopAntiFling()
-    if antiConn then antiConn:Disconnect() antiConn = nil end
+local function stopAntiTP()
+    if heartbeatConnection then heartbeatConnection:Disconnect() heartbeatConnection=nil end
+    lastCF=nil
+    stop=false
 end
 
+lplr.CharacterAdded:Connect(function(character)
+    repeat RunService.Heartbeat:Wait() until character:FindFirstChildOfClass('Humanoid')
+    repeat RunService.Heartbeat:Wait() until character:FindFirstChildOfClass('Humanoid').RootPart
+    if antiTPOn then startAntiTP() end
+end)
+
+lplr.CharacterRemoving:Connect(function()
+    stopAntiTP()
+end)
+
+
+
+-- ================= SWITCHING =================
+
+TPBtn.MouseButton1Click:Connect(function()
+    if autoTP then
+        -- Auto TP ON → ditekan lagi → OFF
+        autoTP = false
+        TPBtn.Text = "Auto TP : OFF"
+        if tpConn then tpConn:Disconnect() tpConn=nil end
+    else
+        -- Auto TP ON → Anti TP ON → matikan Anti TP
+        if antiTPOn then
+            antiTPOn = false
+            AntiBtn.Text = "Anti Teleport : OFF"
+            stopAntiTP()
+        end
+        autoTP = true
+        TPBtn.Text = "Auto TP : ON"
+        startTP()
+    end
+end)
+
 AntiBtn.MouseButton1Click:Connect(function()
-    antiOn = not antiOn
-    AntiBtn.Text = antiOn and "Anti Fling : ON" or "Anti Fling : OFF"
-    if antiOn then startAntiFling() else stopAntiFling() end
+    if antiTPOn then
+        -- Anti TP ON → ditekan lagi → OFF
+        antiTPOn = false
+        AntiBtn.Text = "Anti Teleport : OFF"
+        stopAntiTP()
+    else
+        -- Anti TP ON → Auto TP ON → matikan Auto TP
+        if autoTP then
+            autoTP = false
+            TPBtn.Text = "Auto TP : OFF"
+            if tpConn then tpConn:Disconnect() tpConn=nil end
+        end
+        antiTPOn = true
+        AntiBtn.Text = "Anti Teleport : ON"
+        startAntiTP()
+    end
 end)
 
 -- ================= RESPAWN SAFE =================
@@ -287,5 +335,5 @@ LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.5)
     if touchOn then startTouchFling() end
     if autoTP then startTP() end
-    if antiOn then startAntiFling() end
+    if antiTPOn then startAntiTP() end
 end)
