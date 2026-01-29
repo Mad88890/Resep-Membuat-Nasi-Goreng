@@ -1,0 +1,139 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+
+local oldGui = player:WaitForChild("PlayerGui"):FindFirstChild("FastRunGUI")
+if oldGui then
+    oldGui:Destroy()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = 16
+        humanoid.JumpPower = 50
+    end
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "FastRunGUI"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.AutoLocalize = false
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0,200,0,180)
+frame.Position = UDim2.new(0.5,-100,0.5,-90)
+frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+frame.Active = true
+frame.Draggable = true
+frame.AutoLocalize = false
+
+local speedBox = Instance.new("TextBox", frame)
+speedBox.Size = UDim2.new(0,180,0,30)
+speedBox.Position = UDim2.new(0,10,0,10)
+speedBox.PlaceholderText = "SPEED"
+speedBox.Text = ""
+speedBox.BackgroundColor3 = Color3.fromRGB(70,70,70)
+speedBox.TextColor3 = Color3.new(1,1,1)
+speedBox.ClearTextOnFocus = true
+speedBox.AutoLocalize = false
+
+local jumpBox = Instance.new("TextBox", frame)
+jumpBox.Size = UDim2.new(0,180,0,30)
+jumpBox.Position = UDim2.new(0,10,0,50)
+jumpBox.PlaceholderText = "JUMP"
+jumpBox.Text = ""
+jumpBox.BackgroundColor3 = Color3.fromRGB(70,70,70)
+jumpBox.TextColor3 = Color3.new(1,1,1)
+jumpBox.ClearTextOnFocus = true
+jumpBox.AutoLocalize = false
+
+local button = Instance.new("TextButton", frame)
+button.Size = UDim2.new(0,180,0,40)
+button.Position = UDim2.new(0,10,0,90)
+button.TextColor3 = Color3.new(1,1,1)
+button.AutoLocalize = false
+
+local toggleButton = Instance.new("TextButton", screenGui)
+toggleButton.Size = UDim2.new(0,200,0,30)
+toggleButton.Position = UDim2.new(0.5,-100,0.5,-130)
+toggleButton.TextColor3 = Color3.new(0,0,0)
+toggleButton.Active = true
+toggleButton.Draggable = true
+toggleButton.AutoLocalize = false
+
+local fastRunEnabled = false
+local connection
+local defaultSpeed = 100
+local defaultJump = 1
+local runLerp = 0.1
+local jumpLerp = 50
+
+button.Text = "OFF"
+button.BackgroundColor3 = Color3.fromRGB(200,0,0)
+
+frame.Visible = true
+toggleButton.Text = "Hide"
+toggleButton.BackgroundColor3 = Color3.fromRGB(200,0,0)
+
+local function toggleFastRun()
+    fastRunEnabled = not fastRunEnabled
+    local char = player.Character or player.CharacterAdded:Wait()
+    local humanoid = char:WaitForChild("Humanoid")
+    if fastRunEnabled then
+        button.Text = "ON"
+        button.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        connection = RunService.Heartbeat:Connect(function(dt)
+            local targetSpeed = tonumber(speedBox.Text) or defaultSpeed
+            local jumpPower = tonumber(jumpBox.Text) or defaultJump
+            local dir = humanoid.MoveDirection
+            if dir.Magnitude > 0 then
+                local targetPos = hrp.Position + (dir * targetSpeed * dt)
+                hrp.CFrame = hrp.CFrame:Lerp(
+                    CFrame.new(targetPos, targetPos + hrp.CFrame.LookVector),
+                    runLerp
+                )
+            end
+            if humanoid:GetState() == Enum.HumanoidStateType.Jumping then
+                local targetPos = hrp.Position + Vector3.new(0, jumpPower * dt, 0)
+                hrp.CFrame = hrp.CFrame:Lerp(
+                    CFrame.new(targetPos, targetPos + hrp.CFrame.LookVector),
+                    jumpLerp
+                )
+            end
+        end)
+        humanoid.Died:Connect(function()
+            if connection then connection:Disconnect() end
+            button.Text = "OFF"
+            button.BackgroundColor3 = Color3.fromRGB(200,0,0)
+            fastRunEnabled = false
+            humanoid.WalkSpeed = 16
+            humanoid.JumpPower = 50
+        end)
+    else
+        if connection then connection:Disconnect() end
+        button.Text = "OFF"
+        button.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        humanoid.WalkSpeed = 16
+        humanoid.JumpPower = 50
+    end
+end
+
+local function toggleGUI()
+    if frame.Visible then
+        frame.Visible = false
+        toggleButton.Text = "Open"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        toggleButton.TextColor3 = Color3.new(0,0,0)
+    else
+        frame.Visible = true
+        toggleButton.Text = "Hide"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        toggleButton.TextColor3 = Color3.new(0,0,0)
+    end
+end
+
+button.MouseButton1Click:Connect(toggleFastRun)
+toggleButton.MouseButton1Click:Connect(toggleGUI)
