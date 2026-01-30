@@ -4,239 +4,211 @@ local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 local cam = workspace.CurrentCamera
 
-local runDummyScript = function(f, scri)
-    local oldenv = getfenv(f)
-    local newenv = setmetatable({}, {
-        __index = function(_, k)
-            if k:lower() == 'script' then
-                return scri
-            else
-                return oldenv[k]
-            end
-        end
-    })
-    setfenv(f, newenv)
-    ypcall(function() f() end)
+local gui = Instance.new("ScreenGui")
+gui.Name = "SpectateGui"
+gui.ResetOnSpawn = false
+gui.Parent = lp:WaitForChild("PlayerGui")
+
+local bar = Instance.new("Frame", gui)
+bar.Position = UDim2.new(0.5,-110,0.85,-25)
+bar.Size = UDim2.new(0,220,0,50)
+bar.BackgroundColor3 = Color3.new(0,0,0)
+bar.BackgroundTransparency = 0.3
+
+local prevBtn = Instance.new("TextButton", bar)
+prevBtn.Size = UDim2.new(0.2,0,1,0)
+prevBtn.Text = "<"
+prevBtn.Font = Enum.Font.SourceSansBold
+prevBtn.TextSize = 30
+prevBtn.TextColor3 = Color3.fromRGB(0,255,0)
+prevBtn.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
+
+local nextBtn = Instance.new("TextButton", bar)
+nextBtn.Position = UDim2.new(0.8,0,0,0)
+nextBtn.Size = UDim2.new(0.2,0,1,0)
+nextBtn.Text = ">"
+nextBtn.Font = Enum.Font.SourceSansBold
+nextBtn.TextSize = 30
+nextBtn.TextColor3 = Color3.fromRGB(0,255,0)
+nextBtn.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
+
+local title = Instance.new("TextLabel", bar)
+title.Position = UDim2.new(0.2,0,0,0)
+title.Size = UDim2.new(0.6,0,1,0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.SourceSansSemibold
+title.Text = "<spectating>"
+title.TextColor3 = Color3.new(1,1,1)
+title.TextScaled = true
+
+local nameBox = Instance.new("TextBox", bar)
+nameBox.Size = UDim2.new(1,0,0,20)
+nameBox.Position = UDim2.new(0,0,1,0)
+nameBox.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
+nameBox.TextColor3 = Color3.fromRGB(0,255,0)
+nameBox.Font = Enum.Font.SourceSansBold
+nameBox.TextSize = 16
+nameBox.PlaceholderText = "Username/Name"
+nameBox.Text = ""
+
+local toggleBtn = Instance.new("TextButton", gui)
+toggleBtn.Position = UDim2.new(1,-70,0.05,0)
+toggleBtn.Size = UDim2.new(0,80,0,40)
+toggleBtn.BackgroundColor3 = Color3.new(0,0,0)
+toggleBtn.BackgroundTransparency = 0.4
+toggleBtn.Text = "Spectate"
+toggleBtn.Font = Enum.Font.SourceSansBold
+toggleBtn.TextSize = 20
+toggleBtn.TextColor3 = Color3.fromRGB(0,255,0)
+
+local uiCorner = Instance.new("UICorner", toggleBtn)
+uiCorner.CornerRadius = UDim.new(0.3,0)
+
+local spectatorFloat = Instance.new("Part")
+spectatorFloat.Name = "SpectatorFloat"
+spectatorFloat.Size = Vector3.new(2,2,2)
+spectatorFloat.Transparency = 1
+spectatorFloat.Anchored = true
+spectatorFloat.CanCollide = false
+spectatorFloat.Parent = workspace
+
+local spectating = false
+local index = 1
+local playersList = {}
+local charConn, renderConn
+
+local function getTargetRoot(char)
+    return char:FindFirstChild("HumanoidRootPart")
+        or char.PrimaryPart
+        or char:FindFirstChild("Head")
+        or char:FindFirstChildWhichIsA("BasePart")
 end
 
-cors = {}
-mas = Instance.new("Model", game:GetService("Lighting")) 
-mas.Name = "CompiledModel"
-
--- GUI
-o1 = Instance.new("ScreenGui")
-o1.Name = "SpectateGui"
-o1.ResetOnSpawn = false
-o1.Parent = mas
-
-o2 = Instance.new("Frame", o1)
-o2.Name = "Bar"
-o2.Position = UDim2.new(-1, -100, 0.85, -25)
-o2.Size = UDim2.new(0, 220, 0, 50)
-o2.BackgroundColor3 = Color3.new(0,0,0)
-o2.BackgroundTransparency = 0.3
-o2.BorderSizePixel = 0
-
-o3 = Instance.new("TextButton", o2)
-o3.Name = "Previous"
-o3.Size = UDim2.new(0.2,0,1,0)
-o3.Text = "<"
-o3.Font = Enum.Font.SourceSansBold
-o3.TextSize = 30
-o3.TextColor3 = Color3.fromRGB(0,255,0)
-o3.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
-o3.BorderSizePixel = 0
-
-o4 = Instance.new("TextButton", o2)
-o4.Name = "Next"
-o4.Position = UDim2.new(0.8,0,0,0)
-o4.Size = UDim2.new(0.2,0,1,0)
-o4.Text = ">"
-o4.Font = Enum.Font.SourceSansBold
-o4.TextSize = 30
-o4.TextColor3 = Color3.fromRGB(0,255,0)
-o4.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
-o4.BorderSizePixel = 0
-
-o5 = Instance.new("TextLabel", o2)
-o5.Name = "Title"
-o5.Position = UDim2.new(0.2,0,0,0)
-o5.Size = UDim2.new(0.6,0,1,0)
-o5.BackgroundTransparency = 1
-o5.Font = Enum.Font.SourceSansSemibold
-o5.Text = "Spectating"
-o5.TextColor3 = Color3.new(1,1,1)
-o5.TextScaled = true
-
-o6 = Instance.new("ImageButton", o1)
-o6.Name = "Button"
-o6.Position = UDim2.new(1,-70,0.05,0)
-o6.Size = UDim2.new(0,55,0,55)
-o6.BackgroundColor3 = Color3.new(0,0,0)
-o6.BackgroundTransparency = 0.4
-o6.Image = "http://www.roblox.com/asset/?id=176106970"
-o6.ImageColor3 = Color3.fromRGB(0,255,0)
-local uiCorner = Instance.new("UICorner", o6)
-uiCorner.CornerRadius = UDim.new(1,0)
-
--- drag button
-local dragging, dragStart, startPos
-o6.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = o6.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+local function updatePlayersList()
+    playersList = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= lp then table.insert(playersList, p) end
     end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        o6.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
-o7 = Instance.new("LocalScript", o1)
-
-table.insert(cors, coroutine.create(function()
-    runDummyScript(function()
-        local bar = script.Parent.Bar
-        local title = bar.Title
-        local spectating = false
-        local index = 1
-        local charConn, renderConn
-
-        local hl = Instance.new("Highlight")
-        hl.FillTransparency = 1
-        hl.OutlineColor = Color3.fromRGB(0,255,0)
-        hl.OutlineTransparency = 0
-
-        local esp = Instance.new("BillboardGui")
-        esp.Size = UDim2.new(0,200,0,40)
-        esp.AlwaysOnTop = true
-        esp.ExtentsOffset = Vector3.new(0,3.5,0)
-
-        local nameLabel = Instance.new("TextLabel", esp)
-        nameLabel.Size = UDim2.new(1,0,1,0)
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.TextColor3 = Color3.fromRGB(0,255,0)
-        nameLabel.TextStrokeTransparency = 0
-        nameLabel.Font = Enum.Font.SourceSansBold
-        nameLabel.TextSize = 18
-
-        local spectatorFloat = Instance.new("Part")
-        spectatorFloat.Name = "SpectatorFloat"
-        spectatorFloat.Size = Vector3.new(2,2,2)
-        spectatorFloat.Transparency = 1
-        spectatorFloat.Anchored = true
-        spectatorFloat.CanCollide = false
-        spectatorFloat.Parent = nil
-
-        local playersList = {}
-
-        local function safeResetCamera()
-            if lp.Character and lp.Character:FindFirstChild("Humanoid") then
-                cam.CameraSubject = lp.Character:FindFirstChild("Humanoid")
-            end
-        end
-
-        local function updatePlayersList()
-            playersList = {}
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= lp then table.insert(playersList, p) end
-            end
-            if index > #playersList then index = #playersList end
-        end
-
-        local function setSpectateTarget(target)
-            if charConn then charConn:Disconnect() end
-            if renderConn then renderConn:Disconnect() end
-
-            if not target or not target.Parent then
-                safeResetCamera()
-                return
-            end
-
-            local char = target.Character
-            if not char then
-                safeResetCamera()
-                return
-            end
-
-            local root = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart or char:FindFirstChild("Head")
-            if not root then
-                safeResetCamera()
-                return
-            end
-
-            spectatorFloat.Parent = workspace
-            cam.CameraSubject = spectatorFloat
-
-            renderConn = RunService.Heartbeat:Connect(function()
-                if root and root.Parent then
-                    spectatorFloat.CFrame = root.CFrame -- langsung loop
-                else
-                    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                        spectatorFloat.CFrame = lp.Character.HumanoidRootPart.CFrame
-                    end
-                end
-            end)
-
-            charConn = target.CharacterAdded:Connect(function()
-                task.wait(0.1)
-                if spectating then setSpectateTarget(target) end
-            end)
-
-            title.Text = target.Name
-            hl.Parent = char
-            esp.Parent = char
-            esp.Adornee = root
-            nameLabel.Text = target.Name .. " | " .. target.DisplayName
-        end
-
-        o6.MouseButton1Click:Connect(function()
-            spectating = not spectating
-            if spectating then
-                bar:TweenPosition(UDim2.new(0.5,-110,0.85,-25),"Out","Quad",0.3,true)
-                updatePlayersList()
-                if #playersList > 0 then
-                    if index < 1 or index > #playersList then index = 1 end
-                    setSpectateTarget(playersList[index])
-                end
-            else
-                if charConn then charConn:Disconnect() end
-                if renderConn then renderConn:Disconnect() end
-                hl.Parent = nil
-                esp.Parent = nil
-                bar:TweenPosition(UDim2.new(-1,-100,0.85,-25),"In","Quad",0.3,true)
-                safeResetCamera()
-                spectatorFloat.Parent = nil
-            end
-        end)
-
-        o2.Previous.MouseButton1Click:Connect(function()
-            if #playersList <= 0 then return end
-            index = index - 1
-            if index < 1 then index = #playersList end
-            setSpectateTarget(playersList[index])
-        end)
-
-        o2.Next.MouseButton1Click:Connect(function()
-            if #playersList <= 0 then return end
-            index = index + 1
-            if index > #playersList then index = 1 end
-            setSpectateTarget(playersList[index])
-        end)
-
-        Players.PlayerAdded:Connect(updatePlayersList)
-        Players.PlayerRemoving:Connect(updatePlayersList)
-    end, o7)
-end))
-
-mas.Parent = workspace
-local mas1 = mas:GetChildren()
-for i = 1, #mas1 do
-    mas1[i].Parent = lp:WaitForChild("PlayerGui")
+    if index > #playersList then index = #playersList end
 end
-mas:Destroy()
-for i = 1, #cors do coroutine.resume(cors[i]) end
+
+local function setSpectateTarget(target)
+    if charConn then charConn:Disconnect() end
+    if renderConn then renderConn:Disconnect() end
+    if not target or not target.Character then return end
+    local root = getTargetRoot(target.Character)
+    if not root then return end
+
+    cam.CameraSubject = spectatorFloat
+    local lastCFrame = spectatorFloat.CFrame
+    renderConn = RunService.Heartbeat:Connect(function()
+        if root and root.Parent then
+            lastCFrame = root.CFrame
+            spectatorFloat.CFrame = root.CFrame
+        else
+            spectatorFloat.CFrame = lastCFrame
+        end
+    end)
+
+    charConn = target.CharacterAdded:Connect(function()
+        task.wait(0.1)
+        if spectating then setSpectateTarget(target) end
+    end)
+
+    title.Text = target.Name .. "  " .. target.DisplayName
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+    spectating = not spectating
+    if spectating then
+        bar.Visible = true
+        updatePlayersList()
+        if #playersList > 0 then
+            if index < 1 or index > #playersList then index = 1 end
+            setSpectateTarget(playersList[index])
+        end
+    else
+        if charConn then charConn:Disconnect() end
+        if renderConn then renderConn:Disconnect() end
+        bar.Visible = false
+        spectatorFloat.CFrame = lp.Character and getTargetRoot(lp.Character).CFrame or CFrame.new()
+        cam.CameraSubject = lp.Character:FindFirstChild("Humanoid") or getTargetRoot(lp.Character)
+        title.Text = "<spectating>"
+    end
+end)
+
+prevBtn.MouseButton1Click:Connect(function()
+    if #playersList <= 0 then return end
+    index = index - 1
+    if index < 1 then index = #playersList end
+    setSpectateTarget(playersList[index])
+end)
+
+nextBtn.MouseButton1Click:Connect(function()
+    if #playersList <= 0 then return end
+    index = index + 1
+    if index > #playersList then index = 1 end
+    setSpectateTarget(playersList[index])
+end)
+
+local function findPlayerByPrefix(prefix)
+    prefix = string.lower(prefix:match("^%s*(.-)%s*$"))
+    if prefix == "" then return nil end
+    local candidates = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        local pname = string.lower(p.Name)
+        local dname = string.lower(p.DisplayName)
+        if pname:sub(1, #prefix) == prefix or dname:sub(1, #prefix) == prefix then
+            table.insert(candidates, p)
+        end
+    end
+    if #candidates == 0 then return nil end
+    table.sort(candidates, function(a, b)
+        return string.lower(a.Name) < string.lower(b.Name)
+    end)
+    return candidates[1]
+end
+
+nameBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local inputName = nameBox.Text
+        local targetPlayer = findPlayerByPrefix(inputName)
+        if targetPlayer then
+            setSpectateTarget(targetPlayer)
+        else
+            title.Text = "Player not found"
+        end
+    end
+end)
+
+updatePlayersList()
+
+local function makeDraggable(guiObject, handle)
+    local dragging, dragStart, startPos
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = guiObject.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement 
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            guiObject.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+makeDraggable(bar, title)
+makeDraggable(toggleBtn, toggleBtn)
