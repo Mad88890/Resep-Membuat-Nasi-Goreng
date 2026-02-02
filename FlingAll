@@ -70,17 +70,42 @@ local function startTouchFling()
 	end)
 end
 
-local function stopTouchFling()
-	if touchConn then
-		touchConn:Disconnect()
-		touchConn = nil
-	end
-	local char = LocalPlayer.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart")
-	if hrp then
-		hrp.Velocity = Vector3.zero
-	end
+--thrustfling
+local function startThrustFling()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local thrust = Instance.new("BodyThrust")
+    thrust.Force = Vector3.new(999999, 999999, 999999)
+    thrust.Location = Vector3.new(0.1, 0.1, 0.1) -- Sedikit offset bikin efek putar
+    thrust.Parent = hrp
+
+    task.spawn(function()
+        while touchOn do
+            task.wait()
+        end
+        thrust:Destroy()
+    end)
 end
+
+
+--touchfling
+local function startTouchFling()
+	if touchConn then touchConn:Disconnect() end
+	touchConn = RunService.Heartbeat:Connect(function()
+		if not touchOn then return end
+		local char = LocalPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			local v = hrp.Velocity
+			hrp.Velocity = v * 10000 + Vector3.new(0,10000,0)
+			RunService.RenderStepped:Wait()
+			hrp.Velocity = v
+		end
+	end)
+end
+
 
 TouchBtn.MouseButton1Click:Connect(function()
 	touchOn = not touchOn
