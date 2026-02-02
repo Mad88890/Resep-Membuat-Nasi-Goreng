@@ -38,7 +38,7 @@ end)
 -- Title
 local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1,0,0,30)
-Title.Text = "TouchFling / Auto TP"
+Title.Text = "SuperFling / Auto TP"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.Sarpanch
@@ -48,7 +48,7 @@ Title.TextSize = 22
 local TouchBtn = Instance.new("TextButton", Frame)
 TouchBtn.Size = UDim2.new(0.9,0,0,35)
 TouchBtn.Position = UDim2.new(0.05,0,0,40)
-TouchBtn.Text = "TouchFling : OFF"
+TouchBtn.Text = "SuperFling : OFF"
 TouchBtn.TextSize = 18
 TouchBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
 
@@ -109,7 +109,7 @@ end
 
 TouchBtn.MouseButton1Click:Connect(function()
 	touchOn = not touchOn
-	TouchBtn.Text = touchOn and "TouchFling : ON" or "TouchFling : OFF"
+	TouchBtn.Text = touchOn and "SuperFling : ON" or "SuperFling : OFF"
 	if touchOn then startTouchFling() else stopTouchFling() end
 end)
 
@@ -154,7 +154,7 @@ local function getAllTargets()
 	return t
 end
 
-local ALL_TIME = 3
+local ALL_TIME = 2
 local allIndex = 1
 local lastSwitch = 0
 local currentTarget
@@ -271,7 +271,7 @@ end
 local AntiBtn = Instance.new("TextButton", Frame)
 AntiBtn.Size = UDim2.new(0.9,0,0,35)
 AntiBtn.Position = UDim2.new(0.05,0,0,170)
-AntiBtn.Text = "Anti Teleport : OFF"
+AntiBtn.Text = "Anti TP : OFF"
 AntiBtn.TextSize = 18
 AntiBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
 
@@ -327,7 +327,7 @@ TPBtn.MouseButton1Click:Connect(function()
         -- Auto TP ON → Anti TP ON → matikan Anti TP
         if antiTPOn then
             antiTPOn = false
-            AntiBtn.Text = "Anti Teleport : OFF"
+            AntiBtn.Text = "Anti TP : OFF"
             stopAntiTP()
         end
         autoTP = true
@@ -340,7 +340,7 @@ AntiBtn.MouseButton1Click:Connect(function()
     if antiTPOn then
         -- Anti TP ON → ditekan lagi → OFF
         antiTPOn = false
-        AntiBtn.Text = "Anti Teleport : OFF"
+        AntiBtn.Text = "Anti TP : OFF"
         stopAntiTP()
     else
         -- Anti TP ON → Auto TP ON → matikan Auto TP
@@ -350,7 +350,7 @@ AntiBtn.MouseButton1Click:Connect(function()
             if tpConn then tpConn:Disconnect() tpConn=nil end
         end
         antiTPOn = true
-        AntiBtn.Text = "Anti Teleport : ON"
+        AntiBtn.Text = "Anti TP : ON"
         startAntiTP()
     end
 end)
