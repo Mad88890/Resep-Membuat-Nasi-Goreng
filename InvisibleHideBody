@@ -1,18 +1,19 @@
-local Player = game.Players.LocalPlayer
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
-local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
--- --- SETUP UI (DARK GREY) ---
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "InvisGui_Ultimate"
+ScreenGui.Name = "InvisibleGui"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = game:GetService("CoreGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 130, 0, 70)
-MainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 150, 0, 100)
+MainFrame.Position = UDim2.new(0.5, -75, 0.5, -50)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
@@ -21,182 +22,162 @@ local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = MainFrame
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, 0, 0, 30)
-TitleLabel.Text = "Hide Body"
-TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Font = Enum.Font.SourceSansBold
-TitleLabel.TextSize = 14
-TitleLabel.Parent = MainFrame
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "invisible"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 18
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = MainFrame
 
-local MainButton = Instance.new("TextButton")
-MainButton.Size = UDim2.new(0.85, 0, 0, 30)
-MainButton.Position = UDim2.new(0.075, 0, 0.45, 0)
-MainButton.Text = "OFF"
-MainButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-MainButton.TextColor3 = Color3.new(1, 1, 1)
-MainButton.Font = Enum.Font.SourceSansBold
-MainButton.TextSize = 14
-MainButton.Parent = MainFrame
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0.8, 0, 0, 40)
+ToggleBtn.Position = UDim2.new(0.1, 0, 0.45, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+ToggleBtn.Text = "OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.TextSize = 16
+ToggleBtn.Parent = MainFrame
 
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = MainButton
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 6)
+btnCorner.Parent = ToggleBtn
 
--- --- LOGIKA DRAG ---
-local dragging, dragInput, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = MainFrame.Position
+local isActive = false
+local connection
+local fakeChar
+local fakeRoot
+local floatPart
+
+local function stopGodMode()
+    if not isActive then return end
+    isActive = false
+    
+    ToggleBtn.Text = "OFF"
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if root and fakeRoot then
+        root.CFrame = fakeRoot.CFrame
     end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    
+    if connection then connection:Disconnect() end
+    if fakeChar then fakeChar:Destroy() end
+    if floatPart then floatPart:Destroy() end
+    
+    if hum then
+        workspace.CurrentCamera.CameraSubject = hum
     end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
-end)
 
--- --- VARIABEL FISIKA CUSTOM ---
-local isInvisible = false
-local offset = -50 
-local fakeModel = nil
-local loopConn = nil
-local lastSafeCFrame = nil 
-
-local jumpVelocity = 0
-local gravity = -0.35 -- Kecepatan jatuh
-local isJumping = false
-local currentY = 0
-
--- --- FUNGSI FORCE OFF ---
-local function forceOff()
-    isInvisible = false
-    MainButton.Text = "OFF"
-    MainButton.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-    if loopConn then loopConn:Disconnect() end
-    local char = Player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChild("Humanoid")
-    if hum then Camera.CameraSubject = hum end
-    if fakeModel and hrp then
-        hrp.CFrame = fakeModel.PrimaryPart.CFrame
-        fakeModel:Destroy()
-        fakeModel = nil
-    end
-    if char then
-        for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") or v:IsA("Decal") then
-                v.Transparency = (v.Name == "HumanoidRootPart") and 1 or 0
-            end
-        end
-    end
+    StarterGui:SetCore("SendNotification", {
+        Title = "Status",
+        Text = "Invisible: Off",
+        Duration = 3
+    })
 end
 
--- --- LOGIKA TOGGLE ---
-local function toggleInvisible()
-    local char = Player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChild("Humanoid")
-    if not hrp or not hum then return end
+local function startGodMode()
+    if isActive then return end
+    local char = LocalPlayer.Character
+    if not char then return end
 
-    if isInvisible then
-        forceOff()
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not root or not hum then return end
+
+    isActive = true
+    
+    ToggleBtn.Text = "ON"
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+
+    char.Archivable = true
+    fakeChar = char:Clone()
+    char.Archivable = false
+
+    local lastPos = root.CFrame
+    local hiddenPos = lastPos * CFrame.new(0, 5000, 0)
+
+    fakeChar.Parent = workspace
+    local fakeHum = fakeChar:FindFirstChildOfClass("Humanoid")
+    fakeRoot = fakeChar:FindFirstChild("HumanoidRootPart")
+
+    local animScript = fakeChar:FindFirstChild("Animate")
+    if animScript then
+        animScript.Disabled = true
+        task.wait(0.1)
+        animScript.Disabled = false
+    end
+
+    floatPart = Instance.new("Part")
+    floatPart.Size = Vector3.new(4, 0.5, 4)
+    floatPart.Transparency = 1
+    floatPart.CanCollide = true
+    floatPart.Anchored = true
+    floatPart.Parent = workspace
+
+    workspace.CurrentCamera.CameraSubject = fakeHum
+
+    connection = RunService.RenderStepped:Connect(function()
+        if isActive and char and root and fakeRoot and fakeHum then
+            root.CFrame = hiddenPos
+            root.Velocity = Vector3.new(0, 0, 0)
+            floatPart.CFrame = root.CFrame * CFrame.new(0, -3.1, 0)
+            fakeHum:Move(hum.MoveDirection, false)
+            if hum.Jump then fakeHum.Jump = true end
+            if fakeHum.Health <= 0 then fakeHum.Health = fakeHum.MaxHealth end
+        else
+            stopGodMode()
+        end
+    end)
+
+    fakeRoot.CFrame = lastPos
+    
+    StarterGui:SetCore("SendNotification", {
+        Title = "Status",
+        Text = "Invisible: On",
+        Duration = 3
+    })
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    if isActive then
+        stopGodMode()
     else
-        isInvisible = true
-        MainButton.Text = "ON"
-        MainButton.BackgroundColor3 = Color3.fromRGB(40, 160, 40)
+        startGodMode()
+    end
+end)
 
-        char.Archivable = true
-        fakeModel = char:Clone()
-        char.Archivable = false
-        fakeModel.Parent = workspace
+local dragToggle = nil
+local dragStart = nil
+local startPos = nil
+
+local function updateInput(input)
+    local delta = input.Position - dragStart
+    local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    MainFrame.Position = position
+end
+
+MainFrame.InputBegan:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        dragToggle = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
         
-        for _, v in pairs(fakeModel:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.CanCollide, v.Transparency, v.Anchored = false, 0.5, true
-            elseif v:IsA("LocalScript") or v:IsA("Script") then
-                v:Destroy()
-            end
-        end
-
-        local fakeHum = fakeModel:FindFirstChildOfClass("Humanoid")
-        if fakeHum then Camera.CameraSubject = fakeHum end
-        currentY = hrp.Position.Y
-
-        loopConn = RunService.Heartbeat:Connect(function()
-            if isInvisible and Player.Character and fakeModel then
-                local currentHrp = Player.Character:FindFirstChild("HumanoidRootPart")
-                local currentHum = Player.Character:FindFirstChild("Humanoid")
-                
-                if currentHrp and currentHum then
-                    -- 1. Deteksi Lantai (Climbing/Gravity)
-                    local rayOrigin = fakeModel.PrimaryPart.Position + Vector3.new(0, 2, 0)
-                    local rayDirection = Vector3.new(0, -10, 0)
-                    local raycastParams = RaycastParams.new()
-                    raycastParams.FilterDescendantsInstances = {char, fakeModel, workspace.CurrentCamera}
-                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-
-                    local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-                    local floorY = result and result.Position.Y or -100
-
-                    -- 2. Logika Lompat & Gravitasi
-                    if isJumping then
-                        jumpVelocity = jumpVelocity + gravity
-                        currentY = currentY + jumpVelocity
-                        if currentY <= floorY + 3 then -- Mendarat
-                            currentY = floorY + 3
-                            isJumping = false
-                            jumpVelocity = 0
-                        end
-                    else
-                        -- Otomatis menanjak (Smooth Climbing)
-                        if currentY < floorY + 3 then
-                            currentY = currentY + 0.5 -- Kecepatan naik tangga
-                        elseif currentY > floorY + 3.1 then
-                            currentY = currentY + gravity -- Jatuh jika tidak ada lantai
-                        end
-                    end
-
-                    -- 3. Kontrol Kamera & Gerak
-                    local camLook = Camera.CFrame.LookVector
-                    local flatLook = Vector3.new(camLook.X, 0, camLook.Z).Unit
-                    local moveDir = currentHum.MoveDirection
-                    
-                    local currentRot = (moveDir.Magnitude > 0) and CFrame.new(Vector3.new(), flatLook) or fakeModel.PrimaryPart.CFrame.Rotation
-                    local newPos = fakeModel.PrimaryPart.Position + (moveDir * (currentHum.WalkSpeed / 40))
-                    local finalCFrame = CFrame.new(newPos.X, currentY, newPos.Z) * currentRot
-                    
-                    fakeModel:SetPrimaryPartCFrame(finalCFrame)
-                    currentHrp.CFrame = finalCFrame * CFrame.new(0, offset, 0)
-                    currentHrp.Velocity = Vector3.new(0,0,0)
-                    lastSafeCFrame = finalCFrame
-                end
-            end
-        end)
-
-        -- Fungsi Lompat Manual
-        local jumpInput = UserInputService.InputBegan:Connect(function(input, gpe)
-            if not gpe and input.KeyCode == Enum.KeyCode.Space and not isJumping and isInvisible then
-                isJumping = true
-                jumpVelocity = 2.5 -- Kekuatan lompat
-            end
-        end)
-
-        hum.Died:Connect(function()
-            if isInvisible then
-                jumpInput:Disconnect()
-                forceOff()
-                Player.CharacterAdded:Wait()
-                task.wait(0.5)
-                Player.Character.HumanoidRootPart.CFrame = lastSafeCFrame
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragToggle = false
             end
         end)
     end
-end
+end)
 
-MainButton.MouseButton1Click:Connect(toggleInvisible)
+UserInputService.InputChanged:Connect(function(input)
+    if dragToggle and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        updateInput(input)
+    end
+end)
