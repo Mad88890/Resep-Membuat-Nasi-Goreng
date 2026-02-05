@@ -1,5 +1,3 @@
-local JarakSembunyi = -15 
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
@@ -13,8 +11,8 @@ ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 150, 0, 100)
-MainFrame.Position = UDim2.new(0.5, -75, 0.5, -50)
+MainFrame.Size = UDim2.new(0, 160, 0, 150)
+MainFrame.Position = UDim2.new(0.5, -80, 0.5, -75)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -34,8 +32,8 @@ Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0.8, 0, 0, 40)
-ToggleBtn.Position = UDim2.new(0.1, 0, 0.45, 0)
+ToggleBtn.Size = UDim2.new(0.8, 0, 0, 35)
+ToggleBtn.Position = UDim2.new(0.1, 0, 0.25, 0)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
 ToggleBtn.Text = "OFF"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -47,16 +45,52 @@ local btnCorner = Instance.new("UICorner")
 btnCorner.CornerRadius = UDim.new(0, 6)
 btnCorner.Parent = ToggleBtn
 
+local HeightInput = Instance.new("TextBox")
+HeightInput.Size = UDim2.new(0.8, 0, 0, 30)
+HeightInput.Position = UDim2.new(0.1, 0, 0.6, 0)
+HeightInput.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+HeightInput.Text = "-15"
+HeightInput.TextColor3 = Color3.fromRGB(0, 255, 0)
+HeightInput.PlaceholderText = "Height..."
+HeightInput.Font = Enum.Font.SourceSansBold
+HeightInput.TextSize = 14
+HeightInput.Parent = MainFrame
+
+local inputCorner = Instance.new("UICorner")
+inputCorner.CornerRadius = UDim.new(0, 6)
+inputCorner.Parent = HeightInput
+
+local HeightLabel = Instance.new("TextLabel")
+HeightLabel.Size = UDim2.new(0.8, 0, 0, 20)
+HeightLabel.Position = UDim2.new(0.1, 0, 0.85, 0)
+HeightLabel.BackgroundTransparency = 1
+HeightLabel.Text = "Set Height (Y)"
+HeightLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+HeightLabel.TextSize = 12
+HeightLabel.Font = Enum.Font.SourceSans
+HeightLabel.Parent = MainFrame
+
 local isActive = false
+local currentHeight = -15
 local connection
 local fakeChar
 local fakeRoot
 local floatPart
 
+HeightInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local num = tonumber(HeightInput.Text)
+        if num then
+            currentHeight = num
+        else
+            HeightInput.Text = tostring(currentHeight)
+        end
+    end
+end)
+
 local function stopGodMode()
     if not isActive then return end
     isActive = false
-    
     ToggleBtn.Text = "OFF"
     ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
     
@@ -71,10 +105,7 @@ local function stopGodMode()
     if connection then connection:Disconnect() end
     if fakeChar then fakeChar:Destroy() end
     if floatPart then floatPart:Destroy() end
-    
-    if hum then
-        workspace.CurrentCamera.CameraSubject = hum
-    end
+    if hum then workspace.CurrentCamera.CameraSubject = hum end
 
     StarterGui:SetCore("SendNotification", {
         Title = "Status",
@@ -122,11 +153,9 @@ local function startGodMode()
 
     connection = RunService.RenderStepped:Connect(function()
         if isActive and char and root and fakeRoot and fakeHum then
-            root.CFrame = fakeRoot.CFrame * CFrame.new(0, JarakSembunyi, 0)
+            root.CFrame = fakeRoot.CFrame * CFrame.new(0, currentHeight, 0)
             root.Velocity = Vector3.new(0, 0, 0)
-            
             floatPart.CFrame = root.CFrame * CFrame.new(0, -3.1, 0)
-            
             fakeHum:Move(hum.MoveDirection, false)
             if hum.Jump then fakeHum.Jump = true end
         else
