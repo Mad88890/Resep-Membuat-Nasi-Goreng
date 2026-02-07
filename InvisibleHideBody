@@ -4,6 +4,7 @@ local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
+-- UI SETUP
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "InvisibleGui"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -70,6 +71,7 @@ HeightLabel.TextSize = 12
 HeightLabel.Font = Enum.Font.SourceSans
 HeightLabel.Parent = MainFrame
 
+-- VARIABLES
 local isActive = false
 local currentHeight = -15
 local connection
@@ -77,6 +79,7 @@ local fakeChar
 local fakeRoot
 local floatPart
 
+-- FUNCTIONS
 HeightInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         local num = tonumber(HeightInput.Text)
@@ -172,10 +175,21 @@ local function startGodMode()
     })
 end
 
+-- BUTTON CLICK EVENT
 ToggleBtn.MouseButton1Click:Connect(function()
     if isActive then stopGodMode() else startGodMode() end
 end)
 
+-- KEYBIND EVENT (CTRL KIRI)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed then
+        if input.KeyCode == Enum.KeyCode.LeftControl then
+            if isActive then stopGodMode() else startGodMode() end
+        end
+    end
+end)
+
+-- DRAGGABLE UI
 local dragToggle, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
