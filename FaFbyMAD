@@ -1,12 +1,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VU = game:GetService("VirtualUser")
+local VIM = game:GetService("VirtualInputManager")
 
 -- ==========================================
 -- 1. BASE GUI
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-ScreenGui.Name = "MadWriter_TabSystem_V10"
+ScreenGui.Name = "MadWriter_TabSystem_V18"
 ScreenGui.ResetOnSpawn = false
 
 local ToggleMain = Instance.new("TextButton", ScreenGui)
@@ -22,9 +23,9 @@ local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 260, 0, 340)
 MainFrame.Position = UDim2.new(0.5, -130, 0.5, -170)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Instance.new("UICorner", MainFrame)
 MainFrame.Active = true
 MainFrame.Draggable = true 
-Instance.new("UICorner", MainFrame)
 
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 35)
@@ -39,15 +40,12 @@ Instance.new("UICorner", Title)
 -- 2. NAVIGASI TAB
 -- ==========================================
 local TabBar = Instance.new("Frame", MainFrame)
-TabBar.Size = UDim2.new(1, 0, 0, 30)
-TabBar.Position = UDim2.new(0, 0, 0, 35)
-TabBar.BackgroundTransparency = 1
+TabBar.Size = UDim2.new(1, 0, 0, 30); TabBar.Position = UDim2.new(0, 0, 0, 35); TabBar.BackgroundTransparency = 1
 
 local function CreateTabBtn(text, pos)
     local B = Instance.new("TextButton", TabBar)
     B.Size = UDim2.new(0.33, -4, 1, 0); B.Position = pos; B.Text = text
-    B.BackgroundColor3 = Color3.fromRGB(40, 40, 40); B.TextColor3 = Color3.new(0.7, 0.7, 0.7)
-    Instance.new("UICorner", B)
+    B.BackgroundColor3 = Color3.fromRGB(40, 40, 40); B.TextColor3 = Color3.new(0.7, 0.7, 0.7); Instance.new("UICorner", B)
     return B
 end
 
@@ -68,19 +66,22 @@ for _, page in pairs({TreePage, SheepPage, CowPage}) do
 end
 
 -- ==========================================
--- 4. LOGIKA PENGAMAN
+-- 4. LOGIKA PENGAMAN & HELPER
 -- ==========================================
-local Features = {}
+local Features = { AutoV = false }
+
 local function AllOff()
-    for _, data in pairs(Features) do
-        data.Enabled = false
-        if data.Btn then data.Btn.Text = "OFF"; data.Btn.BackgroundColor3 = Color3.fromRGB(180, 40, 40) end
+    for name, data in pairs(Features) do
+        if name ~= "AutoV" then
+            data.Enabled = false
+            if data.Btn then data.Btn.Text = "OFF"; data.Btn.BackgroundColor3 = Color3.fromRGB(180, 40, 40) end
+        end
     end
 end
 
 local function StopOthers(current)
     for name, data in pairs(Features) do
-        if name ~= current then
+        if name ~= current and name ~= "AutoV" then
             data.Enabled = false
             if data.Btn then data.Btn.Text = "OFF"; data.Btn.BackgroundColor3 = Color3.fromRGB(180, 40, 40) end
         end
@@ -89,37 +90,37 @@ end
 
 local function QuickBtn(parent, text, height, fontSize)
     local F = Instance.new("Frame", parent); F.Size = UDim2.new(0.9, 0, 0, height); F.BackgroundTransparency = 1
-    local L = Instance.new("TextLabel", F); L.Text = text; L.Size = UDim2.new(1, 0, 0, 20); L.TextColor3 = Color3.new(1,1,1); L.Font = Enum.Font.GothamBold; L.TextSize = fontSize or 16; L.BackgroundTransparency = 1
+    local L = Instance.new("TextLabel", F); L.Text = text; L.Size = UDim2.new(1, 0, 0, 20); L.TextColor3 = Color3.new(1,1,1); L.Font = Enum.Font.GothamBold; L.TextSize = fontSize or 20; L.BackgroundTransparency = 1
     local B = Instance.new("TextButton", F); B.Size = UDim2.new(1, 0, 0, 30); B.Position = UDim2.new(0, 0, 0, 25); B.Text = "OFF"; B.BackgroundColor3 = Color3.fromRGB(180, 40, 40); B.TextColor3 = Color3.new(1, 1, 1); B.Font = Enum.Font.SourceSansBold; Instance.new("UICorner", B)
     return B
 end
 
 -- ==========================================
--- 5. ISI FITUR
+-- 5. ISI FITUR (SEMUA TAB)
 -- ==========================================
 
--- [TREE PAGE]
+-- [TAB TREE]
 local FT1 = Instance.new("Frame", TreePage); FT1.Size = UDim2.new(0.9, 0, 0, 95); FT1.BackgroundTransparency = 1
-Instance.new("TextLabel", FT1).Text = "TreeCut"; FT1.TextLabel.Size = UDim2.new(1, 0, 0, 20); FT1.TextLabel.TextColor3 = Color3.new(1,1,1); FT1.TextLabel.Font = Enum.Font.GothamBold; FT1.TextLabel.BackgroundTransparency = 1
-local TreeIdx = Instance.new("TextBox", FT1); TreeIdx.Size = UDim2.new(0.48, 0, 0, 30); TreeIdx.Position = UDim2.new(0, 0, 0, 25); TreeIdx.PlaceholderText = "TreeID"; TreeIdx.BackgroundColor3 = Color3.fromRGB(45, 45, 45); TreeIdx.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", TreeIdx)
+local LTree = Instance.new("TextLabel", FT1); LTree.Text = "TreeCut"; LTree.Size = UDim2.new(1, 0, 0, 20); LTree.TextColor3 = Color3.new(1,1,1); LTree.Font = Enum.Font.GothamBold; LTree.TextSize = 20; LTree.BackgroundTransparency = 1
+local TreeIdx = Instance.new("TextBox", FT1); TreeIdx.Size = UDim2.new(0.48, 0, 0, 30); TreeIdx.Position = UDim2.new(0, 0, 0, 25); TreeIdx.Text = ""; TreeIdx.PlaceholderText = "TreeID"; TreeIdx.BackgroundColor3 = Color3.fromRGB(45, 45, 45); TreeIdx.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", TreeIdx)
 local GlobalInterval = Instance.new("TextBox", FT1); GlobalInterval.Size = UDim2.new(0.48, 0, 0, 30); GlobalInterval.Position = UDim2.new(0.52, 0, 0, 25); GlobalInterval.Text = "1.0"; GlobalInterval.BackgroundColor3 = Color3.fromRGB(45, 45, 45); GlobalInterval.TextColor3 = Color3.new(0, 1, 1); Instance.new("UICorner", GlobalInterval)
 local TreeBtn = Instance.new("TextButton", FT1); TreeBtn.Size = UDim2.new(1, 0, 0, 30); TreeBtn.Position = UDim2.new(0, 0, 0, 60); TreeBtn.Text = "OFF"; TreeBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40); TreeBtn.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", TreeBtn)
 Features["TreeCut"] = {Enabled = false, Btn = TreeBtn}
 
-Features["TakeLog"] = {Enabled = false, Btn = QuickBtn(TreePage, "TakeLog", 60)}
-Features["TakePlank"] = {Enabled = false, Btn = QuickBtn(TreePage, "TakePlank", 60)}
+local FLog = Instance.new("Frame", TreePage); FLog.Size = UDim2.new(0.9, 0, 0, 60); FLog.BackgroundTransparency = 1
+local LLog = Instance.new("TextLabel", FLog); LLog.Text = "TakeLog"; LLog.Size = UDim2.new(1, 0, 0, 20); LLog.TextColor3 = Color3.new(1,1,1); LLog.Font = Enum.Font.GothamBold; LLog.TextSize = 20; LLog.BackgroundTransparency = 1
+local LogBtn = Instance.new("TextButton", FLog); LogBtn.Size = UDim2.new(0.75, -5, 0, 30); LogBtn.Position = UDim2.new(0, 0, 0, 25); LogBtn.Text = "OFF"; LogBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40); LogBtn.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", LogBtn)
+local AutoVBtn = Instance.new("TextButton", FLog); AutoVBtn.Size = UDim2.new(0.25, 0, 0, 30); AutoVBtn.Position = UDim2.new(0.75, 0, 0, 25); AutoVBtn.Text = "V"; AutoVBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40); AutoVBtn.TextColor3 = Color3.new(1, 1, 1); AutoVBtn.Font = Enum.Font.GothamBold; AutoVBtn.TextSize = 18; Instance.new("UICorner", AutoVBtn).CornerRadius = UDim.new(0, 8)
+Features["TakeLog"] = {Enabled = false, Btn = LogBtn}
 
--- [SHEEP PAGE]
--- ShearWool (Typo Fixed)
-Features["ShearWool"] = {Enabled = false, Btn = QuickBtn(SheepPage, "ShearWool", 60)}
+Features["TakePlank"] = {Enabled = false, Btn = QuickBtn(TreePage, "TakePlank", 60, 20)}
 
--- CarryWool (Permanen)
-Features["CarryWool"] = {Enabled = false, Btn = QuickBtn(SheepPage, "CarryWool", 60, 22)}
+-- [TAB SHEEP]
+Features["ShearWool"] = {Enabled = false, Btn = QuickBtn(SheepPage, "ShearWool", 60, 20)}
+Features["CarryWool"] = {Enabled = false, Btn = QuickBtn(SheepPage, "CarryWool", 60, 20)}
+Features["FillShirt"] = {Enabled = false, Btn = QuickBtn(SheepPage, "FillShirt (Dupe)", 60, 20)}
 
--- FillShirt (Dupe)
-Features["FillShirt"] = {Enabled = false, Btn = QuickBtn(SheepPage, "FillShirt (Dupe)", 60)}
-
--- [COW PAGE]
+-- [TAB COW]
 local LCow = Instance.new("TextLabel", CowPage); LCow.Text = "Cow Menu Soon..."; LCow.Size = UDim2.new(1,0,0,50); LCow.TextColor3 = Color3.new(0.5,0.5,0.5); LCow.BackgroundTransparency = 1
 
 -- ==========================================
@@ -127,60 +128,46 @@ local LCow = Instance.new("TextLabel", CowPage); LCow.Text = "Cow Menu Soon...";
 -- ==========================================
 local LarryPath = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Larry")
 
-local function runFillShirt()
-    while Features["FillShirt"].Enabled do
+local function PressV()
+    VIM:SendKeyEvent(true, Enum.KeyCode.V, false, game)
+    task.wait(0.05)
+    VIM:SendKeyEvent(false, Enum.KeyCode.V, false, game)
+end
+
+AutoVBtn.MouseButton1Click:Connect(function()
+    Features.AutoV = not Features.AutoV
+    AutoVBtn.BackgroundColor3 = Features.AutoV and Color3.fromRGB(40, 180, 40) or Color3.fromRGB(180, 40, 40)
+end)
+
+local function runTakePlank() 
+    while Features["TakePlank"].Enabled do 
+        local equipment = workspace:FindFirstChild("Equipment")
         local buildings = workspace:FindFirstChild("Buildings")
-        if buildings then
-            for _, b in pairs(buildings:GetChildren()) do
-                if not Features["FillShirt"].Enabled then break end
-                if b.Name == "SpindleMachine" then
-                    LarryPath["EVTSpindle.Withdraw"]:FireServer(b)
-                elseif b.Name == "ShirtFactory" then
-                    local input = b:FindFirstChild("Functional") and b.Functional:FindFirstChild("IO") and b.Functional.IO:FindFirstChild("Input") and b.Functional.IO.Input:FindFirstChild("WoolBundles")
-                    if input then LarryPath.FNCInsertDraggable:InvokeServer(b, input) end
+        local flatbed = equipment and equipment:FindFirstChild("M2Flatbed")
+        local waitTime = tonumber(GlobalInterval.Text) or 1.0
+        if flatbed and buildings then
+            for _, sawmill in pairs(buildings:GetChildren()) do
+                if sawmill.Name == "Sawmill" then
+                    LarryPath["EVTSawmill.WithdrawPlanks"]:FireServer(flatbed, sawmill)
+                    task.wait(0.1)
                 end
             end
         end
-        task.wait(1.0)
-    end
-end
-
-local function runCarryWool() 
-    while Features["CarryWool"].Enabled do 
-        local obs = workspace:FindFirstChild("DraggableObjects") 
-        if obs then 
-            for _, v in pairs(obs:GetChildren()) do 
-                if v.Name == "Wool" and Features["CarryWool"].Enabled then LarryPath.EVTRequestToCarry:FireServer(v) end 
-            end 
-        end 
-        task.wait(0.5)
+        task.wait(waitTime)
     end 
 end
 
-local function runShearWool() 
-    while Features["ShearWool"].Enabled do 
-        local anis = workspace:FindFirstChild("Animals") 
-        if anis then 
-            for _, v in pairs(anis:GetChildren()) do 
-                if not Features["ShearWool"].Enabled then break end 
-                LarryPath.EVTCollectAnimalProduction:FireServer("Wool", v) 
-            end 
-        end 
-        task.wait(30) 
-    end 
-end
-
--- Tree logic...
-local function runTakeLog() while Features["TakeLog"].Enabled do local logs = {} for _, v in ipairs(workspace.DraggableObjects:GetChildren()) do if v.Name == "Log" then table.insert(logs, v) end if #logs >= 13 then break end end if #logs > 0 then LarryPath.EVTEatDraggables:FireServer(unpack({ logs })) end task.wait(1.0) end end
+local function runTakeLog() while Features["TakeLog"].Enabled do local logs = {} local obs = workspace:FindFirstChild("DraggableObjects") if obs then for _, v in ipairs(obs:GetChildren()) do if v.Name == "Log" then table.insert(logs, v) end if #logs >= 13 then break end end end if #logs > 0 then LarryPath.EVTEatDraggables:FireServer(unpack({ logs })) task.wait(0.1) if Features.AutoV then PressV() end end task.wait(1.0) end end
 local function runTreeCut() while Features["TreeCut"].Enabled do local num = tonumber(TreeIdx.Text) or 1 local w = tonumber(GlobalInterval.Text) or 0.5 LarryPath.EVTCutTreeWithClaw_Stage1:FireServer(workspace.Fields.Field, num) task.wait(w) if not Features["TreeCut"].Enabled then break end LarryPath.EVTCutTreeWithClaw_Stage2:FireServer(workspace.Fields.Field, num, -2.1862904256261793) if Features["TreeCut"].Enabled then TreeIdx.Text = tostring(num + 1) end task.wait(0.1) end end
-local function runTakePlank() local Flatbed = workspace.Equipment:FindFirstChild("M2Flatbed") while Features["TakePlank"].Enabled do local w = tonumber(GlobalInterval.Text) or 1.0 for _, s in pairs(workspace.Buildings:GetChildren()) do if s.Name == "Sawmill" and Flatbed then LarryPath["EVTSawmill.WithdrawPlanks"]:FireServer(Flatbed, s) task.wait(0.1) end end task.wait(w) end end
+local function runFillShirt() while Features["FillShirt"].Enabled do local blds = workspace:FindFirstChild("Buildings") if blds then for _, b in pairs(blds:GetChildren()) do if not Features["FillShirt"].Enabled then break end if b.Name == "SpindleMachine" then LarryPath["EVTSpindle.Withdraw"]:FireServer(b) elseif b.Name == "ShirtFactory" then local input = b:FindFirstChild("Functional") and b.Functional:FindFirstChild("IO") and b.Functional.IO:FindFirstChild("Input") and b.Functional.IO.Input:FindFirstChild("WoolBundles") if input then LarryPath.FNCInsertDraggable:InvokeServer(b, input) end end end end task.wait(1.0) end end
+local function runCarryWool() while Features["CarryWool"].Enabled do local obs = workspace:FindFirstChild("DraggableObjects") if obs then for _, v in pairs(obs:GetChildren()) do if v.Name == "Wool" and Features["CarryWool"].Enabled then LarryPath.EVTRequestToCarry:FireServer(v) end end end task.wait(0.5) end end
+local function runShearWool() while Features["ShearWool"].Enabled do local anis = workspace:FindFirstChild("Animals") if anis then for _, v in pairs(anis:GetChildren()) do if not Features["ShearWool"].Enabled then break end LarryPath.EVTCollectAnimalProduction:FireServer("Wool", v) end end task.wait(30) end end
 
 -- ==========================================
--- 7. EVENT HANDLERS
+-- 7. EVENT HANDLERS (TAB & BIND)
 -- ==========================================
 local function UpdateTabs(activeBtn, activePage)
-    AllOff()
-    TreePage.Visible = false; SheepPage.Visible = false; CowPage.Visible = false
+    AllOff(); TreePage.Visible = false; SheepPage.Visible = false; CowPage.Visible = false
     BtnTabTree.BackgroundColor3 = Color3.fromRGB(40,40,40); BtnTabSheep.BackgroundColor3 = Color3.fromRGB(40,40,40); BtnTabCow.BackgroundColor3 = Color3.fromRGB(40,40,40)
     BtnTabTree.TextColor3 = Color3.new(0.7,0.7,0.7); BtnTabSheep.TextColor3 = Color3.new(0.7,0.7,0.7); BtnTabCow.TextColor3 = Color3.new(0.7,0.7,0.7)
     activePage.Visible = true; activeBtn.BackgroundColor3 = Color3.fromRGB(60,60,60); activeBtn.TextColor3 = Color3.new(1,1,1)
@@ -194,12 +181,8 @@ local function Bind(featName, func)
     local data = Features[featName]
     data.Btn.MouseButton1Click:Connect(function()
         data.Enabled = not data.Enabled
-        if data.Enabled then
-            StopOthers(featName)
-            data.Btn.Text = "ON"; data.Btn.BackgroundColor3 = Color3.fromRGB(40,180,40); task.spawn(func)
-        else
-            data.Btn.Text = "OFF"; data.Btn.BackgroundColor3 = Color3.fromRGB(180,40,40)
-        end
+        if data.Enabled then StopOthers(featName); data.Btn.Text = "ON"; data.Btn.BackgroundColor3 = Color3.fromRGB(40,180,40); task.spawn(func)
+        else data.Btn.Text = "OFF"; data.Btn.BackgroundColor3 = Color3.fromRGB(180,40,40) end
     end)
 end
 
