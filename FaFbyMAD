@@ -118,7 +118,7 @@ Features["TakePlank"] = {Enabled = false, Btn = QuickBtn(TreePage, "TakePlank", 
 -- [TAB SHEEP]
 Features["ShearWool"] = {Enabled = false, Btn = QuickBtn(SheepPage, "ShearWool", 60, 20)}
 Features["CarryWool"] = {Enabled = false, Btn = QuickBtn(SheepPage, "CarryWool", 60, 20)}
-Features["FillShirt"] = {Enabled = false, Btn = QuickBtn(SheepPage, "FillShirt (Dupe)", 60, 20)}
+Features["FillShirt"] = {Enabled = false, Btn = QuickBtn(SheepPage, "FillShirt", 60, 20)}
 
 -- [TAB COW]
 local LCow = Instance.new("TextLabel", CowPage); LCow.Text = "Cow Menu Soon..."; LCow.Size = UDim2.new(1,0,0,50); LCow.TextColor3 = Color3.new(0.5,0.5,0.5); LCow.BackgroundTransparency = 1
