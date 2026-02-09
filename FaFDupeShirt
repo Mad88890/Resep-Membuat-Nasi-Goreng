@@ -1,0 +1,135 @@
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local TitleLabel = Instance.new("TextLabel")
+local TogglePallet = Instance.new("TextButton")
+local ToggleDupe = Instance.new("TextButton")
+local IntervalInput = Instance.new("TextBox")
+local IntervalLabel = Instance.new("TextLabel")
+
+-- GUI Setup
+ScreenGui.Parent = game.CoreGui
+MainFrame.Name = "MadWrite"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.5, -75, 0.5, -100)
+MainFrame.Size = UDim2.new(0, 160, 0, 185)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+TitleLabel.Parent = MainFrame
+TitleLabel.Size = UDim2.new(1, 0, 0, 30)
+TitleLabel.Text = "MadWrite"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.TextSize = 18
+
+-- UI: Auto Pallet Section
+IntervalLabel.Parent = MainFrame
+IntervalLabel.Position = UDim2.new(0, 10, 0, 35)
+IntervalLabel.Size = UDim2.new(0, 140, 0, 20)
+IntervalLabel.Text = "Interval"
+IntervalLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+IntervalLabel.BackgroundTransparency = 1
+IntervalLabel.TextSize = 11
+IntervalLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+IntervalInput.Parent = MainFrame
+IntervalInput.Position = UDim2.new(0.1, 0, 0, 55)
+IntervalInput.Size = UDim2.new(0.8, 0, 0, 25)
+IntervalInput.Text = "5"
+IntervalInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+IntervalInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+TogglePallet.Parent = MainFrame
+TogglePallet.Position = UDim2.new(0.1, 0, 0, 85)
+TogglePallet.Size = UDim2.new(0.8, 0, 0, 35)
+TogglePallet.Text = "Pallet: OFF"
+TogglePallet.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+TogglePallet.TextColor3 = Color3.fromRGB(255, 255, 255)
+TogglePallet.Font = Enum.Font.SourceSansBold
+
+-- UI: Dupe Section
+ToggleDupe.Parent = MainFrame
+ToggleDupe.Position = UDim2.new(0.1, 0, 0, 135)
+ToggleDupe.Size = UDim2.new(0.8, 0, 0, 35)
+ToggleDupe.Text = "Dupe: OFF"
+ToggleDupe.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+ToggleDupe.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleDupe.Font = Enum.Font.SourceSansBold
+
+-- Logic Variables
+local runningPallet = false
+local runningDupe = false
+local Larry = game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Larry")
+
+-- [ LOGIC AUTO PALLET ]
+task.spawn(function()
+    while true do
+        if runningPallet then
+            pcall(function()
+                local pallet = workspace:WaitForChild("DraggableObjects"):FindFirstChild("Pallet")
+                if pallet then
+                    -- Remote 1 (Ambil)
+                    Larry:WaitForChild("FNCPickUpPallet"):InvokeServer(pallet, 8)
+                    task.wait(0.2)
+                    
+                    -- Remote 2 (Taruh)
+                    local storageTarget = nil
+                    for _, b in pairs(workspace:WaitForChild("Buildings"):GetChildren()) do
+                        if b.Name == "PalletStorage" then
+                            local hit = b:FindFirstChild("Functional") and b.Functional:FindFirstChild("Input") and b.Functional.Input:FindFirstChild("A") and b.Functional.Input.A:FindFirstChild("Hitbox") and b.Functional.Input.A.Hitbox:FindFirstChild("PalletAttachment")
+                            if hit then storageTarget = hit break end
+                        end
+                    end
+                    if storageTarget then
+                        Larry:WaitForChild("FNCDropPalletOnto"):InvokeServer(storageTarget, 2.0935513973236084)
+                    end
+                end
+            end)
+            task.wait(tonumber(IntervalInput.Text) or 5) -- Jeda setelah satu siklus
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+-- [ LOGIC DUPE (INSTAN) ]
+task.spawn(function()
+    while true do
+        if runningDupe then
+            local blds = workspace:WaitForChild("Buildings")
+            for _, b in ipairs(blds:GetChildren()) do
+                task.spawn(function()
+                    -- 1. INSTANT WITHDRAW SPINDLE
+                    if b.Name == "SpindleMachine" then
+                        Larry:WaitForChild("EVTSpindle.Withdraw"):FireServer(b)
+                    end
+
+                    -- 2. INSTANT FILL SHIRT FACTORY
+                    if b.Name == "ShirtFactory" then
+                        local input = b:FindFirstChild("Functional") and b.Functional:FindFirstChild("IO") and b.Functional.IO:FindFirstChild("Input") and b.Functional.IO.Input:FindFirstChild("WoolBundles")
+                        if input then
+                            Larry:WaitForChild("FNCInsertDraggable"):InvokeServer(b, input)
+                        end
+                    end
+                end)
+            end
+        end
+        task.wait() -- Interval hampir 0 (Instan sesuai script aslimu)
+    end
+end)
+
+-- Button Events
+TogglePallet.MouseButton1Click:Connect(function()
+    runningPallet = not runningPallet
+    TogglePallet.Text = runningPallet and "Pallet: ON" or "Pallet: OFF"
+    TogglePallet.BackgroundColor3 = runningPallet and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+end)
+
+ToggleDupe.MouseButton1Click:Connect(function()
+    runningDupe = not runningDupe
+    ToggleDupe.Text = runningDupe and "Dupe: ON" or "Dupe: OFF"
+    ToggleDupe.BackgroundColor3 = runningDupe and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(70, 70, 70)
+end)
