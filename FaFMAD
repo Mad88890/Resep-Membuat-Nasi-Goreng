@@ -25,7 +25,6 @@ Instance.new("UICorner", MainFrame)
 
 local UIScale = Instance.new("UIScale", MainFrame)
 
--- TOMBOL HIDE/SHOW (Disesuaikan posisinya sesuai screenshot)
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
 ToggleBtn.Text = "MW"
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
@@ -45,13 +44,11 @@ local function UpdateScale(val)
 end
 
 UpdateScale(1.0)
-
--- POSISI BARU: Di kiri atas, di bawah menu icon Roblox (Disesuaikan dari screenshot)
 MainFrame.Position = UDim2.new(0.5, -225, 0.5, -160)
-ToggleBtn.Position = UDim2.new(0, 42, 0, 85) -- Posisi kiri atas di bawah bar
+ToggleBtn.Position = UDim2.new(0, 42, 0, 85)
 
 -- ==========================================
--- 2. KEYBIND & TOGGLE LOGIC
+-- 2. LOGIC & DESTROY SYSTEM
 -- ==========================================
 local isBinding = false
 local function ToggleUI() MainFrame.Visible = not MainFrame.Visible end
@@ -73,10 +70,11 @@ local function DestroyScript()
 end
 
 -- ==========================================
--- 3. HEADER & SETTINGS BUTTON
+-- 3. HEADER & CLOSE CONFIRMATION
 -- ==========================================
 local Header = Instance.new("Frame", MainFrame)
 Header.Size = UDim2.new(1, 0, 0, 40); Header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Header.ZIndex = 1
 Instance.new("UICorner", Header)
 
 local SettingBtn = Instance.new("TextButton", Header)
@@ -91,6 +89,35 @@ Title.Font = Enum.Font.GothamBold; Title.TextSize = 16; Title.BackgroundTranspar
 local CloseBtn = Instance.new("TextButton", Header)
 CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0, 5)
 CloseBtn.Text = "X"; CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40); CloseBtn.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", CloseBtn)
+
+-- POP-UP KONFIRMASI (Berada di dalam MainFrame agar tidak tertutup)
+local ConfirmFrame = Instance.new("Frame", MainFrame)
+ConfirmFrame.Size = UDim2.new(0.7, 0, 0.4, 0)
+ConfirmFrame.Position = UDim2.new(0.15, 0, 0.3, 0)
+ConfirmFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ConfirmFrame.BorderSizePixel = 0
+ConfirmFrame.Visible = false
+ConfirmFrame.ZIndex = 500 -- Sangat tinggi agar di paling depan
+Instance.new("UICorner", ConfirmFrame)
+
+local UIStroke = Instance.new("UIStroke", ConfirmFrame)
+UIStroke.Thickness = 2; UIStroke.Color = Color3.fromRGB(0, 255, 150)
+
+local ConfirmText = Instance.new("TextLabel", ConfirmFrame)
+ConfirmText.Size = UDim2.new(1, 0, 0.6, 0); ConfirmText.Text = "Are You Sure Close Script?"; ConfirmText.TextColor3 = Color3.new(1, 1, 1)
+ConfirmText.Font = Enum.Font.GothamBold; ConfirmText.TextSize = 14; ConfirmText.BackgroundTransparency = 1; ConfirmText.ZIndex = 501
+
+local YesBtn = Instance.new("TextButton", ConfirmFrame)
+YesBtn.Size = UDim2.new(0.4, 0, 0.25, 0); YesBtn.Position = UDim2.new(0.07, 0, 0.65, 0); YesBtn.Text = "YES"
+YesBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40); YesBtn.TextColor3 = Color3.new(1, 1, 1); YesBtn.Font = Enum.Font.GothamBold; YesBtn.ZIndex = 501; Instance.new("UICorner", YesBtn)
+
+local NoBtn = Instance.new("TextButton", ConfirmFrame)
+NoBtn.Size = UDim2.new(0.4, 0, 0.25, 0); NoBtn.Position = UDim2.new(0.53, 0, 0.65, 0); NoBtn.Text = "NO"
+NoBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60); NoBtn.TextColor3 = Color3.new(1, 1, 1); NoBtn.Font = Enum.Font.GothamBold; NoBtn.ZIndex = 501; Instance.new("UICorner", NoBtn)
+
+CloseBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = true end)
+NoBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = false end)
+YesBtn.MouseButton1Click:Connect(DestroyScript)
 
 -- ==========================================
 -- 4. SIDEBAR & PAGES
@@ -131,7 +158,7 @@ local function ShowPage(name)
 end
 
 -- ==========================================
--- 5. SETTINGS PAGE (MOBILE FIX SLIDER)
+-- 5. SETTINGS PAGE
 -- ==========================================
 local KBFrame = Instance.new("Frame", PageSettings); KBFrame.Size = UDim2.new(0.95, 0, 0, 60); KBFrame.BackgroundTransparency = 1
 local KBLbl = Instance.new("TextLabel", KBFrame); KBLbl.Size = UDim2.new(1, 0, 0, 20); KBLbl.Text = "Hide/Show Keybind (PC)"; KBLbl.TextColor3 = Color3.new(0.8,0.8,0.8); KBLbl.BackgroundTransparency = 1; KBLbl.TextXAlignment = 0
@@ -202,16 +229,14 @@ local function CreateFeatureBtn(parent, title, hasV)
     return B, V
 end
 
--- [TAB STORAGE/COW/SHEEP/TREE]
 local CSLabel = Instance.new("TextLabel", PageStorage); CSLabel.Size = UDim2.new(1, 0, 0, 50); CSLabel.Text = "Coming Soon"; CSLabel.TextColor3 = Color3.fromRGB(0, 255, 150); CSLabel.Font = Enum.Font.GothamBold; CSLabel.TextSize = 18; CSLabel.BackgroundTransparency = 1
-
 local FCowMain = Instance.new("Frame", PageCow); FCowMain.Size = UDim2.new(0.95, 0, 0, 125); FCowMain.BackgroundTransparency = 1
 local CowAmt = Instance.new("TextBox", FCowMain); CowAmt.Size = UDim2.new(1,0,0,25); CowAmt.Position = UDim2.new(0,0,0,22); CowAmt.Text = "12"; CowAmt.BackgroundColor3 = Color3.fromRGB(40,40,40); CowAmt.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", CowAmt)
 local SendBtn = Instance.new("TextButton", FCowMain); SendBtn.Size = UDim2.new(1,0,0,30); SendBtn.Position = UDim2.new(0,0,0,52); SendBtn.Text = "Send Cow"; SendBtn.BackgroundColor3 = Color3.fromRGB(50,50,50); SendBtn.TextColor3 = Color3.new(1,1,1); SendBtn.Font = Enum.Font.GothamBold; Instance.new("UICorner", SendBtn)
 local ReleaseBtn = Instance.new("TextButton", FCowMain); ReleaseBtn.Size = UDim2.new(1,0,0,30); ReleaseBtn.Position = UDim2.new(0,0,0,87); ReleaseBtn.Text = "Release Cow"; ReleaseBtn.BackgroundColor3 = Color3.fromRGB(50,50,50); ReleaseBtn.TextColor3 = Color3.new(1,1,1); ReleaseBtn.Font = Enum.Font.GothamBold; Instance.new("UICorner", ReleaseBtn)
+
 Features["AutoMilk"] = {Enabled = false, Btn = CreateFeatureBtn(PageCow, "Auto Milk", false)}
 local BoxBtn, BoxV = CreateFeatureBtn(PageCow, "Take Animal Box", true); Features["TakeBox"] = {Enabled = false, Btn = BoxBtn}
-
 Features["ShearWool"] = {Enabled = false, Btn = CreateFeatureBtn(PageSheep, "Shear Wool", false)}
 Features["CarryWool"] = {Enabled = false, Btn = CreateFeatureBtn(PageSheep, "Carry Wool", false)}
 Features["FillShirt"] = {Enabled = false, Btn = CreateFeatureBtn(PageSheep, "Fill Shirt Factory", false)}
@@ -243,7 +268,6 @@ BtnSheep.MouseButton1Click:Connect(function() ShowPage("Sheep") end)
 BtnTree.MouseButton1Click:Connect(function() ShowPage("Tree") end)
 BtnStorage.MouseButton1Click:Connect(function() ShowPage("Storage") end)
 ToggleBtn.MouseButton1Click:Connect(ToggleUI)
-CloseBtn.MouseButton1Click:Connect(DestroyScript)
 
 if BoxV then BoxV.MouseButton1Click:Connect(function() SyncAutoV(not Features.AutoV) end) end
 if LogV then LogV.MouseButton1Click:Connect(function() SyncAutoV(not Features.AutoV) end) end
