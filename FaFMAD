@@ -2,27 +2,31 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VU = game:GetService("VirtualUser")
 local VIM = game:GetService("VirtualInputManager")
+local UIS = game:GetService("UserInputService")
 
 -- ==========================================
--- 1. BASE GUI & CLEANING SYSTEM
+-- 1. BASE GUI & SCALING SYSTEM
 -- ==========================================
 local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-ScreenGui.Name = "MadWriter_Final_V23"
+ScreenGui.Name = "MadWriter_Final_V26"
 ScreenGui.ResetOnSpawn = false
 
+local BaseSize = Vector2.new(450, 320)
+local BaseToggleSize = Vector2.new(45, 45)
+local CurrentScale = 1.0
+local CurrentKeybind = Enum.KeyCode.LeftControl
+
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 450, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -225, 0.5, -160)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 0
-Instance.new("UICorner", MainFrame)
 MainFrame.Active = true
 MainFrame.Draggable = true 
+Instance.new("UICorner", MainFrame)
 
--- TOMBOL HIDE/SHOW
+local UIScale = Instance.new("UIScale", MainFrame)
+
+-- TOMBOL HIDE/SHOW (Disesuaikan posisinya sesuai screenshot)
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
-ToggleBtn.Size = UDim2.new(0, 45, 0, 45)
-ToggleBtn.Position = UDim2.new(0, 15, 0.5, -22)
 ToggleBtn.Text = "MW"
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 ToggleBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
@@ -30,6 +34,34 @@ ToggleBtn.Font = Enum.Font.GothamBold
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true 
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 12)
+local ToggleScale = Instance.new("UIScale", ToggleBtn)
+
+local function UpdateScale(val)
+    CurrentScale = val
+    UIScale.Scale = val
+    ToggleScale.Scale = val
+    MainFrame.Size = UDim2.new(0, BaseSize.X, 0, BaseSize.Y)
+    ToggleBtn.Size = UDim2.new(0, BaseToggleSize.X, 0, BaseToggleSize.Y)
+end
+
+UpdateScale(1.0)
+
+-- POSISI BARU: Di kiri atas, di bawah menu icon Roblox (Disesuaikan dari screenshot)
+MainFrame.Position = UDim2.new(0.5, -225, 0.5, -160)
+ToggleBtn.Position = UDim2.new(0, 42, 0, 85) -- Posisi kiri atas di bawah bar
+
+-- ==========================================
+-- 2. KEYBIND & TOGGLE LOGIC
+-- ==========================================
+local isBinding = false
+local function ToggleUI() MainFrame.Visible = not MainFrame.Visible end
+
+UIS.InputBegan:Connect(function(input, gp)
+    if gp and not isBinding then return end
+    if input.KeyCode == CurrentKeybind then
+        ToggleUI()
+    end
+end)
 
 local Features = { AutoV = false }
 
@@ -37,56 +69,31 @@ local function DestroyScript()
     for _, data in pairs(Features) do
         if typeof(data) == "table" then data.Enabled = false end
     end
-    Features.AutoV = false
-    task.wait(0.2)
     ScreenGui:Destroy()
 end
 
 -- ==========================================
--- 2. HEADER & CLOSE SYSTEM
+-- 3. HEADER & SETTINGS BUTTON
 -- ==========================================
 local Header = Instance.new("Frame", MainFrame)
-Header.Size = UDim2.new(1, 0, 0, 40)
-Header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Header.Size = UDim2.new(1, 0, 0, 40); Header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Instance.new("UICorner", Header)
 
+local SettingBtn = Instance.new("TextButton", Header)
+SettingBtn.Size = UDim2.new(0, 80, 0, 30); SettingBtn.Position = UDim2.new(0, 5, 0, 5)
+SettingBtn.Text = "Setting"; SettingBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+SettingBtn.TextColor3 = Color3.new(1, 1, 1); SettingBtn.Font = Enum.Font.GothamBold; Instance.new("UICorner", SettingBtn)
+
 local Title = Instance.new("TextLabel", Header)
-Title.Size = UDim2.new(1, -40, 1, 0)
-Title.Text = "MADWRITER HUB"
-Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Size = UDim2.new(1, 0, 1, 0); Title.Text = "MADWRITER HUB"; Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.GothamBold; Title.TextSize = 16; Title.BackgroundTransparency = 1
 
 local CloseBtn = Instance.new("TextButton", Header)
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.Text = "X"
-CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-CloseBtn.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", CloseBtn)
-
-local ConfirmFrame = Instance.new("Frame", MainFrame)
-ConfirmFrame.Size = UDim2.new(0, 280, 0, 140); ConfirmFrame.Position = UDim2.new(0.5, -140, 0.5, -70)
-ConfirmFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40); ConfirmFrame.Visible = false; ConfirmFrame.ZIndex = 50; Instance.new("UICorner", ConfirmFrame)
-
-local ConfirmLabel = Instance.new("TextLabel", ConfirmFrame)
-ConfirmLabel.Size = UDim2.new(1, -20, 0, 60); ConfirmLabel.Position = UDim2.new(0, 10, 0, 10)
-ConfirmLabel.Text = "Are you sure you want to delete the GUI?"; ConfirmLabel.TextColor3 = Color3.new(1, 1, 1)
-ConfirmLabel.TextWrapped = true; ConfirmLabel.Font = Enum.Font.GothamBold; ConfirmLabel.TextSize = 14; ConfirmLabel.BackgroundTransparency = 1; ConfirmLabel.ZIndex = 51
-
-local YesBtn = Instance.new("TextButton", ConfirmFrame)
-YesBtn.Size = UDim2.new(0, 100, 0, 35); YesBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
-YesBtn.Text = "Yes"; YesBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 40); YesBtn.TextColor3 = Color3.new(1, 1, 1); YesBtn.ZIndex = 51; Instance.new("UICorner", YesBtn)
-
-local NoBtn = Instance.new("TextButton", ConfirmFrame)
-NoBtn.Size = UDim2.new(0, 100, 0, 35); NoBtn.Position = UDim2.new(0.55, 0, 0.65, 0)
-NoBtn.Text = "No"; NoBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40); NoBtn.TextColor3 = Color3.new(1, 1, 1); NoBtn.ZIndex = 51; Instance.new("UICorner", NoBtn)
-
-CloseBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = true end)
-NoBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = false end)
-YesBtn.MouseButton1Click:Connect(DestroyScript)
-ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.Text = "X"; CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40); CloseBtn.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", CloseBtn)
 
 -- ==========================================
--- 3. SIDEBAR & PAGES
+-- 4. SIDEBAR & PAGES
 -- ==========================================
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.Size = UDim2.new(0, 100, 1, -50); Sidebar.Position = UDim2.new(0, 5, 0, 45); Sidebar.BackgroundTransparency = 1
@@ -96,20 +103,83 @@ local ContentArea = Instance.new("Frame", MainFrame)
 ContentArea.Size = UDim2.new(1, -120, 1, -50); ContentArea.Position = UDim2.new(0, 110, 0, 45); ContentArea.BackgroundTransparency = 1
 
 local Pages = {}; local TabBtns = {}
-local function CreateTab(name)
-    local B = Instance.new("TextButton", Sidebar); B.Size = UDim2.new(1, 0, 0, 35); B.Text = name; B.BackgroundColor3 = Color3.fromRGB(35, 35, 35); B.TextColor3 = Color3.fromRGB(150, 150, 150); B.Font = Enum.Font.GothamSemibold; Instance.new("UICorner", B)
+local function CreateTab(name, showInSidebar)
+    local B = nil
+    if showInSidebar then
+        B = Instance.new("TextButton", Sidebar); B.Size = UDim2.new(1, 0, 0, 35); B.Text = name; B.BackgroundColor3 = Color3.fromRGB(35, 35, 35); B.TextColor3 = Color3.fromRGB(150, 150, 150); B.Font = Enum.Font.GothamSemibold; Instance.new("UICorner", B)
+    end
     local P = Instance.new("ScrollingFrame", ContentArea); P.Size = UDim2.new(1, 0, 1, 0); P.BackgroundTransparency = 1; P.ScrollBarThickness = 2; P.Visible = false; P.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Instance.new("UIListLayout", P).Padding = UDim.new(0, 8)
-    Pages[name] = P; TabBtns[name] = B; return B, P
+    Pages[name] = P; if B then TabBtns[name] = B end
+    return B, P
 end
 
-local BtnCow, PageCow = CreateTab("Cow")
-local BtnSheep, PageSheep = CreateTab("Sheep")
-local BtnTree, PageTree = CreateTab("Tree")
-local BtnStorage, PageStorage = CreateTab("Storage") -- Tambahan Tombol Storage
+local BtnCow, PageCow = CreateTab("Cow", true)
+local BtnSheep, PageSheep = CreateTab("Sheep", true)
+local BtnTree, PageTree = CreateTab("Tree", true)
+local BtnStorage, PageStorage = CreateTab("Storage", true)
+local _, PageSettings = CreateTab("Settings", false)
+
+local function ShowPage(name)
+    for n, p in pairs(Pages) do 
+        p.Visible = (n == name)
+        if TabBtns[n] then
+            TabBtns[n].TextColor3 = (n == name) and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(150, 150, 150)
+            TabBtns[n].BackgroundColor3 = (n == name) and Color3.fromRGB(45, 45, 45) or Color3.fromRGB(35, 35, 35)
+        end
+    end
+end
 
 -- ==========================================
--- 4. UTILS & FEATURE CREATOR
+-- 5. SETTINGS PAGE (MOBILE FIX SLIDER)
+-- ==========================================
+local KBFrame = Instance.new("Frame", PageSettings); KBFrame.Size = UDim2.new(0.95, 0, 0, 60); KBFrame.BackgroundTransparency = 1
+local KBLbl = Instance.new("TextLabel", KBFrame); KBLbl.Size = UDim2.new(1, 0, 0, 20); KBLbl.Text = "Hide/Show Keybind (PC)"; KBLbl.TextColor3 = Color3.new(0.8,0.8,0.8); KBLbl.BackgroundTransparency = 1; KBLbl.TextXAlignment = 0
+local KBBtn = Instance.new("TextButton", KBFrame); KBBtn.Size = UDim2.new(1, 0, 0, 30); KBBtn.Position = UDim2.new(0, 0, 0, 22); KBBtn.Text = "LeftControl"; KBBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); KBBtn.TextColor3 = Color3.fromRGB(0, 255, 150); Instance.new("UICorner", KBBtn)
+
+KBBtn.MouseButton1Click:Connect(function()
+    isBinding = true
+    KBBtn.Text = "Press any key..."
+    local connection; connection = UIS.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            CurrentKeybind = input.KeyCode
+            KBBtn.Text = input.KeyCode.Name
+            isBinding = false
+            connection:Disconnect()
+        end
+    end)
+end)
+
+local SFrame = Instance.new("Frame", PageSettings); SFrame.Size = UDim2.new(0.95, 0, 0, 60); SFrame.BackgroundTransparency = 1
+local SLbl = Instance.new("TextLabel", SFrame); SLbl.Size = UDim2.new(1, 0, 0, 20); SLbl.Text = "GUI Scale: 1.0"; SLbl.TextColor3 = Color3.new(0.8,0.8,0.8); SLbl.BackgroundTransparency = 1; SLbl.TextXAlignment = 0
+local SBack = Instance.new("Frame", SFrame); SBack.Size = UDim2.new(1, 0, 0, 10); SBack.Position = UDim2.new(0, 0, 0, 35); SBack.BackgroundColor3 = Color3.fromRGB(40,40,40); Instance.new("UICorner", SBack)
+local SFill = Instance.new("Frame", SBack); SFill.Size = UDim2.new(0.5, 0, 1, 0); SFill.BackgroundColor3 = Color3.fromRGB(0, 255, 150); Instance.new("UICorner", SFill)
+local SBtn = Instance.new("TextButton", SBack); SBtn.Size = UDim2.new(0, 24, 0, 24); SBtn.Position = UDim2.new(0.5, -12, 0.5, -12); SBtn.Text = ""; SBtn.BackgroundColor3 = Color3.fromRGB(200,200,200); Instance.new("UICorner", SBtn)
+
+local dragging = false
+local function UpdateSlider(input)
+    local inputPos = input.Position.X
+    local relPos = (inputPos - SBack.AbsolutePosition.X) / SBack.AbsoluteSize.X
+    local percent = math.clamp(relPos, 0, 1)
+    local scaleVal = 0.5 + (percent * 1.0)
+    SFill.Size = UDim2.new(percent, 0, 1, 0)
+    SBtn.Position = UDim2.new(percent, -12, 0.5, -12)
+    SLbl.Text = "GUI Scale: " .. string.format("%.2f", scaleVal)
+    UpdateScale(scaleVal)
+end
+
+SBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true end
+end)
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+end)
+UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then UpdateSlider(input) end
+end)
+
+-- ==========================================
+-- 6. FEATURE LOGICS
 -- ==========================================
 local LarryPath = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Larry")
 local vButtons = {}
@@ -132,27 +202,21 @@ local function CreateFeatureBtn(parent, title, hasV)
     return B, V
 end
 
--- ==========================================
--- 5. CONTENT
--- ==========================================
+-- [TAB STORAGE/COW/SHEEP/TREE]
+local CSLabel = Instance.new("TextLabel", PageStorage); CSLabel.Size = UDim2.new(1, 0, 0, 50); CSLabel.Text = "Coming Soon"; CSLabel.TextColor3 = Color3.fromRGB(0, 255, 150); CSLabel.Font = Enum.Font.GothamBold; CSLabel.TextSize = 18; CSLabel.BackgroundTransparency = 1
 
--- [TAB COW]
 local FCowMain = Instance.new("Frame", PageCow); FCowMain.Size = UDim2.new(0.95, 0, 0, 125); FCowMain.BackgroundTransparency = 1
-local LCowT = Instance.new("TextLabel", FCowMain); LCowT.Size = UDim2.new(1,0,0,20); LCowT.Text = "Cow Management"; LCowT.TextColor3 = Color3.new(0.8,0.8,0.8); LCowT.BackgroundTransparency = 1; LCowT.TextXAlignment = Enum.TextXAlignment.Left
 local CowAmt = Instance.new("TextBox", FCowMain); CowAmt.Size = UDim2.new(1,0,0,25); CowAmt.Position = UDim2.new(0,0,0,22); CowAmt.Text = "12"; CowAmt.BackgroundColor3 = Color3.fromRGB(40,40,40); CowAmt.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", CowAmt)
 local SendBtn = Instance.new("TextButton", FCowMain); SendBtn.Size = UDim2.new(1,0,0,30); SendBtn.Position = UDim2.new(0,0,0,52); SendBtn.Text = "Send Cow"; SendBtn.BackgroundColor3 = Color3.fromRGB(50,50,50); SendBtn.TextColor3 = Color3.new(1,1,1); SendBtn.Font = Enum.Font.GothamBold; Instance.new("UICorner", SendBtn)
 local ReleaseBtn = Instance.new("TextButton", FCowMain); ReleaseBtn.Size = UDim2.new(1,0,0,30); ReleaseBtn.Position = UDim2.new(0,0,0,87); ReleaseBtn.Text = "Release Cow"; ReleaseBtn.BackgroundColor3 = Color3.fromRGB(50,50,50); ReleaseBtn.TextColor3 = Color3.new(1,1,1); ReleaseBtn.Font = Enum.Font.GothamBold; Instance.new("UICorner", ReleaseBtn)
 Features["AutoMilk"] = {Enabled = false, Btn = CreateFeatureBtn(PageCow, "Auto Milk", false)}
 local BoxBtn, BoxV = CreateFeatureBtn(PageCow, "Take Animal Box", true); Features["TakeBox"] = {Enabled = false, Btn = BoxBtn}
 
--- [TAB SHEEP]
 Features["ShearWool"] = {Enabled = false, Btn = CreateFeatureBtn(PageSheep, "Shear Wool", false)}
 Features["CarryWool"] = {Enabled = false, Btn = CreateFeatureBtn(PageSheep, "Carry Wool", false)}
 Features["FillShirt"] = {Enabled = false, Btn = CreateFeatureBtn(PageSheep, "Fill Shirt Factory", false)}
 
--- [TAB TREE]
 local FTreeCfg = Instance.new("Frame", PageTree); FTreeCfg.Size = UDim2.new(0.95, 0, 0, 85); FTreeCfg.BackgroundTransparency = 1
-local LTreeT = Instance.new("TextLabel", FTreeCfg); LTreeT.Size = UDim2.new(1,0,0,20); LTreeT.Text = "Tree Cut (ID | Intv)"; LTreeT.TextColor3 = Color3.new(0.8,0.8,0.8); LTreeT.BackgroundTransparency = 1; LTreeT.TextXAlignment = Enum.TextXAlignment.Left
 local TreeIdx = Instance.new("TextBox", FTreeCfg); TreeIdx.Size = UDim2.new(0.48, 0, 0, 25); TreeIdx.Position = UDim2.new(0, 0, 0, 22); TreeIdx.Text = ""; TreeIdx.PlaceholderText = "ID"; TreeIdx.BackgroundColor3 = Color3.fromRGB(40, 40, 40); TreeIdx.TextColor3 = Color3.new(1, 1, 1); Instance.new("UICorner", TreeIdx)
 local GlobalInterval = Instance.new("TextBox", FTreeCfg); GlobalInterval.Size = UDim2.new(0.48, 0, 0, 25); GlobalInterval.Position = UDim2.new(0.52, 0, 0, 22); GlobalInterval.Text = "1.0"; GlobalInterval.BackgroundColor3 = Color3.fromRGB(40, 40, 40); GlobalInterval.TextColor3 = Color3.new(0, 1, 1); Instance.new("UICorner", GlobalInterval)
 local TBtn = Instance.new("TextButton", FTreeCfg); TBtn.Size = UDim2.new(1, 0, 0, 30); TBtn.Position = UDim2.new(0, 0, 0, 52); TBtn.Text = "OFF"; TBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40); TBtn.TextColor3 = Color3.new(1, 1, 1); TBtn.Font = Enum.Font.GothamBold; Instance.new("UICorner", TBtn)
@@ -160,75 +224,35 @@ Features["TreeCut"] = {Enabled = false, Btn = TBtn}
 local LogBtn, LogV = CreateFeatureBtn(PageTree, "Take Log", true); Features["TakeLog"] = {Enabled = false, Btn = LogBtn}
 Features["TakePlank"] = {Enabled = false, Btn = CreateFeatureBtn(PageTree, "Take Plank", false)}
 
--- [TAB STORAGE] - NEW
-local CSLabel = Instance.new("TextLabel", PageStorage)
-CSLabel.Size = UDim2.new(1, 0, 0, 50)
-CSLabel.Text = "Coming Soon"
-CSLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
-CSLabel.Font = Enum.Font.GothamBold
-CSLabel.TextSize = 18
-CSLabel.BackgroundTransparency = 1
-
 -- ==========================================
--- 6. LOGIKA EKSEKUSI
+-- 7. RUNTIME EXECUTION
 -- ==========================================
 local function PressV() VIM:SendKeyEvent(true, Enum.KeyCode.V, false, game); task.wait(0.05); VIM:SendKeyEvent(false, Enum.KeyCode.V, false, game) end
-if BoxV then BoxV.MouseButton1Click:Connect(function() SyncAutoV(not Features.AutoV) end) end
-if LogV then LogV.MouseButton1Click:Connect(function() SyncAutoV(not Features.AutoV) end) end
-
 local function runTakeBox() while Features["TakeBox"].Enabled do local obs = workspace:FindFirstChild("DraggableObjects") if obs then for _, v in ipairs(obs:GetChildren()) do if v.Name == "AnimalFoodBox" and Features["TakeBox"].Enabled then LarryPath.EVTRequestToCarry:FireServer(v); task.wait(0.1); if Features.AutoV then PressV() end end end end task.wait(0.5) end end
 local function runAutoMilk() while Features["AutoMilk"].Enabled do local anis = workspace:FindFirstChild("Animals") if anis then for _, c in ipairs(anis:GetChildren()) do if not Features["AutoMilk"].Enabled then break end if string.find(c.Name, "Cow") then LarryPath.EVTCollectAnimalProduction:FireServer("Milk", c) end end end task.wait(0.1) end end
 local function runTakeLog() while Features["TakeLog"].Enabled do local logs = {}; local obs = workspace:FindFirstChild("DraggableObjects") if obs then for _, v in ipairs(obs:GetChildren()) do if v.Name == "Log" then table.insert(logs, v) end if #logs >= 13 then break end end end if #logs > 0 then LarryPath.EVTEatDraggables:FireServer(unpack({ logs })); task.wait(0.1); if Features.AutoV then PressV() end end task.wait(1.0) end end
 local function runTreeCut() while Features["TreeCut"].Enabled do local num = tonumber(TreeIdx.Text) or 1; local w = tonumber(GlobalInterval.Text) or 0.5; LarryPath.EVTCutTreeWithClaw_Stage1:FireServer(workspace.Fields.Field, num); task.wait(w); if not Features["TreeCut"].Enabled then break end LarryPath.EVTCutTreeWithClaw_Stage2:FireServer(workspace.Fields.Field, num, -2.186); if Features["TreeCut"].Enabled then TreeIdx.Text = tostring(num + 1) end task.wait(0.1) end end
-local function runTakePlank() while Features["TakePlank"].Enabled do local f = workspace.Equipment:FindFirstChild("M2Flatbed"); if f then for _, s in pairs(workspace.Buildings:GetChildren()) do if s.Name == "Sawmill" then LarryPath["EVTSawmill.WithdrawPlanks"]:FireServer(f, s) end end end task.wait(tonumber(GlobalInterval.Text) or 1.0) end end
+local function runTakePlank() while Features["TakePlank"].Enabled do local f = workspace.Equipment:FindFirstChild("M2Flatbed"); if f then for _, s in pairs(workspace.Buildings:GetChildren()) do if s.Name == "Sawmill" then LarryPath["EVTSawmill.WithdrawPlanks"]:FireServer(f, s) end end end task.wait(1.0) end end
 local function runFillShirt() while Features["FillShirt"].Enabled do local blds = workspace:FindFirstChild("Buildings") if blds then for _, b in pairs(blds:GetChildren()) do if not Features["FillShirt"].Enabled then break end if b.Name == "SpindleMachine" then LarryPath["EVTSpindle.Withdraw"]:FireServer(b) elseif b.Name == "ShirtFactory" then local i = b:FindFirstChild("Functional") and b.Functional:FindFirstChild("IO") and b.Functional.IO:FindFirstChild("Input") and b.Functional.IO.Input:FindFirstChild("WoolBundles") if i then LarryPath.FNCInsertDraggable:InvokeServer(b, i) end end end end task.wait(1.0) end end
 local function runCarryWool() while Features["CarryWool"].Enabled do local obs = workspace:FindFirstChild("DraggableObjects") if obs then for _, v in pairs(obs:GetChildren()) do if v.Name == "Wool" and Features["CarryWool"].Enabled then LarryPath.EVTRequestToCarry:FireServer(v) end end end task.wait(0.5) end end
 local function runShearWool() while Features["ShearWool"].Enabled do local anis = workspace:FindFirstChild("Animals") if anis then for _, v in pairs(anis:GetChildren()) do if not Features["ShearWool"].Enabled then break end LarryPath.EVTCollectAnimalProduction:FireServer("Wool", v) end end task.wait(30) end end
 
-SendBtn.MouseButton1Click:Connect(function()
-    local amount = tonumber(CowAmt.Text) or 12
-    local barn = workspace:WaitForChild("Buildings"):FindFirstChild("AutoWoodenBarn")
-    local cows = {}
-    for _, v in ipairs(workspace.Animals:GetChildren()) do
-        if v.Name == "Cow" then v.Name = "Cow_Ship"; table.insert(cows, v) if #cows >= amount then break end end
-    end
-    if #cows > 0 then LarryPath.EVTHerdRequest:FireServer(cows, barn) end
-end)
-
-ReleaseBtn.MouseButton1Click:Connect(function()
-    for _, b in pairs(workspace.Buildings:GetChildren()) do
-        if string.find(b.Name, "Barn") then
-            local spots = b:FindFirstChild("AnimalContainer") and b.AnimalContainer:FindFirstChild("Spots")
-            if spots then for _, s in pairs(spots:GetChildren()) do if s:FindFirstChild("Gate") then LarryPath.EVTOpenBarnGate:FireServer(s.Gate) end end end
-        end
-    end
-end)
-
--- ==========================================
--- 7. NAV & BIND
--- ==========================================
-local function ShowPage(name)
-    for n, p in pairs(Pages) do 
-        p.Visible = (n == name)
-        TabBtns[n].TextColor3 = (n == name) and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(150, 150, 150)
-        TabBtns[n].BackgroundColor3 = (n == name) and Color3.fromRGB(45, 45, 45) or Color3.fromRGB(35, 35, 35)
-    end
-    for _, d in pairs(Features) do if typeof(d) == "table" and d.Btn then d.Enabled = false; d.Btn.Text = "OFF"; d.Btn.BackgroundColor3 = Color3.fromRGB(180, 40, 40) end end
-    SyncAutoV(false)
-end
-
+SettingBtn.MouseButton1Click:Connect(function() ShowPage("Settings") end)
 BtnCow.MouseButton1Click:Connect(function() ShowPage("Cow") end)
 BtnSheep.MouseButton1Click:Connect(function() ShowPage("Sheep") end)
 BtnTree.MouseButton1Click:Connect(function() ShowPage("Tree") end)
-BtnStorage.MouseButton1Click:Connect(function() ShowPage("Storage") end) -- Navigasi Storage
+BtnStorage.MouseButton1Click:Connect(function() ShowPage("Storage") end)
+ToggleBtn.MouseButton1Click:Connect(ToggleUI)
+CloseBtn.MouseButton1Click:Connect(DestroyScript)
+
+if BoxV then BoxV.MouseButton1Click:Connect(function() SyncAutoV(not Features.AutoV) end) end
+if LogV then LogV.MouseButton1Click:Connect(function() SyncAutoV(not Features.AutoV) end) end
 
 local function Bind(feat, func)
-    local d = Features[feat]
-    if not d or not d.Btn then return end
+    local d = Features[feat]; if not d or not d.Btn then return end
     d.Btn.MouseButton1Click:Connect(function()
         d.Enabled = not d.Enabled
         if d.Enabled then
-            for n, f in pairs(Features) do if n ~= feat and typeof(f) == "table" and f.Btn then f.Enabled = false; f.Btn.Text = "OFF"; f.Btn.BackgroundColor3 = Color3.fromRGB(180, 40, 40) end end
             d.Btn.Text = "ON"; d.Btn.BackgroundColor3 = Color3.fromRGB(0, 255, 150); task.spawn(func)
         else
             d.Btn.Text = "OFF"; d.Btn.BackgroundColor3 = Color3.fromRGB(180, 40, 40); SyncAutoV(false)
