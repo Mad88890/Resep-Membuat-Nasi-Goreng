@@ -32,16 +32,16 @@ TitleLabel.TextSize = 18
 IntervalLabel.Parent = MainFrame
 IntervalLabel.Position = UDim2.new(0, 10, 0, 35)
 IntervalLabel.Size = UDim2.new(0, 140, 0, 20)
-IntervalLabel.Text = "Interval (Pallet & X)"
+IntervalLabel.Text = "Interval" -- Tulisan Tree/Plank dihapus
 IntervalLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 IntervalLabel.BackgroundTransparency = 1
-IntervalLabel.TextSize = 11
+IntervalLabel.TextSize = 12
 IntervalLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 IntervalInput.Parent = MainFrame
 IntervalInput.Position = UDim2.new(0.1, 0, 0, 55)
 IntervalInput.Size = UDim2.new(0.8, 0, 0, 25)
-IntervalInput.Text = "5"
+IntervalInput.Text = "5" -- Default balik ke 5
 IntervalInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 IntervalInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 
@@ -57,7 +57,7 @@ local function StyleButton(btn, text, yPos, color)
     btn.BorderSizePixel = 0
 end
 
-StyleButton(TogglePallet, "Pallet", 85, Color3.fromRGB(200, 50, 50))
+StyleButton(TogglePallet, "Auto Pallet", 85, Color3.fromRGB(200, 50, 50))
 StyleButton(ToggleDupe, "Dupe", 130, Color3.fromRGB(70, 70, 70))
 StyleButton(ToggleAutoX, "Auto X", 175, Color3.fromRGB(60, 60, 120))
 
@@ -74,13 +74,20 @@ task.spawn(function()
             pcall(function()
                 local pallet = workspace:WaitForChild("DraggableObjects"):FindFirstChild("Pallet")
                 if pallet then
+                    -- 1. Ambil Pallet
                     Larry:WaitForChild("FNCPickUpPallet"):InvokeServer(pallet, 8)
-                    task.wait(0.2)
                     
-                    -- Mencari target simpan tetap butuh reference, tapi kita buat pcall agar aman
+                    -- 2. Jeda 1 detik agar stabil sebelum drop
+                    task.wait(1)
+                    
+                    -- 3. Cari Target dan Drop Onto
                     for _, b in pairs(workspace.Buildings:GetChildren()) do
-                        if b.Name == "PalletStorage" then
-                            local hit = b:FindFirstChild("Functional") and b.Functional.Input.A.Hitbox:FindFirstChild("PalletAttachment")
+                        if b.Name == "PalletStorage" or b:FindFirstChild("Functional") then
+                            local hit = b.Functional 
+                                and b.Functional:FindFirstChild("Input") 
+                                and b.Functional.Input:FindFirstChild("A") 
+                                and b.Functional.Input.A.Hitbox:FindFirstChild("PalletAttachment")
+                            
                             if hit then 
                                 Larry:WaitForChild("FNCDropPalletOnto"):InvokeServer(hit, 2.093551)
                                 break 
@@ -89,6 +96,7 @@ task.spawn(function()
                     end
                 end
             end)
+            -- 4. Tunggu interval (Default 5 detik)
             task.wait(tonumber(IntervalInput.Text) or 5)
         else
             task.wait(0.5)
@@ -96,17 +104,15 @@ task.spawn(function()
     end
 end)
 
--- [ LOGIC DUPE - MURNI ARGS ]
+-- [ LOGIC DUPE ]
 task.spawn(function()
     while true do
         if runningDupe then
             pcall(function()
-                -- Tembak langsung semua objek di Buildings tanpa looping manual per frame
                 for _, b in ipairs(workspace.Buildings:GetChildren()) do
                     if b.Name == "SpindleMachine" then
                         Larry:WaitForChild("EVTSpindle.Withdraw"):FireServer(b)
                     elseif not runningAutoX and b.Name == "ShirtFactory" then
-                        -- Input path untuk Shirt Factory
                         local input = b.Functional.IO.Input:FindFirstChild("WoolBundles")
                         if input then
                             task.spawn(function()
@@ -118,11 +124,11 @@ task.spawn(function()
                 end
             end)
         end
-        task.wait() -- Instan
+        task.wait()
     end
 end)
 
--- [ LOGIC CLICK X ]
+-- [ LOGIC AUTO X ]
 task.spawn(function()
     while true do
         if runningAutoX then
