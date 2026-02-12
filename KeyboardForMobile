@@ -4,7 +4,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PCEmulator_V20_ForceEmulation"
+ScreenGui.Name = "PCEmulator_V21_CleanUI"
 ScreenGui.Parent = game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
@@ -15,7 +15,7 @@ local isLocked = false
 local isHidden = false
 
 -----------------------------------------
--- MOBILE DRAG SYSTEM (ANCHOR SYSTEM)
+-- MOBILE DRAG SYSTEM (ANCHOR)
 -----------------------------------------
 local function makeDraggable(guiObject, isSpawnedKey)
     local dragging, dragInput, dragStart, startPos
@@ -44,7 +44,7 @@ local function makeDraggable(guiObject, isSpawnedKey)
 end
 
 -----------------------------------------
--- 1. POSISI ATAS TENGAH (GUI UTAMA)
+-- 1. TOMBOL TOGGLE (ATAS TENGAH)
 -----------------------------------------
 local DragAnchor = Instance.new("TextButton")
 DragAnchor.Size = UDim2.new(0, 180, 0, 30)
@@ -68,53 +68,13 @@ Clipper.Parent = DragAnchor
 
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Size = UDim2.new(1, 0, 0, 235)
+ContentFrame.Position = UDim2.new(0, 0, 0, 0)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 ContentFrame.Parent = Clipper
 Instance.new("UICorner", ContentFrame)
 
 -----------------------------------------
--- 2. FORCE INPUT EMULATION (Bypass Logic)
------------------------------------------
--- Fungsi ini memaksa game menerima input sebagai Keyboard
-local function forceKey(keyCode, state)
-    if not isPCMode then return end
-    
-    local isBegan = (state == Enum.UserInputState.Begin)
-    activeKeys[keyCode] = isBegan or nil
-    
-    -- Mencoba memicu UserInputService secara paksa
-    -- Catatan: Hanya executor tertentu yang mendukung simulasi penuh
-    pcall(function()
-        local inputObj = Instance.new("InputObject")
-        inputObj.KeyCode = keyCode
-        inputObj.UserInputType = Enum.UserInputType.Keyboard
-        inputObj.UserInputState = state
-        
-        -- Simulasi penekanan tombol ke engine
-        game:GetService("GuiService"):SetInspectMenuEnabled(false) -- Trigger refresh
-    end)
-end
-
--- Fallback Movement Engine
-RunService.RenderStepped:Connect(function()
-    if not isPCMode or not LocalPlayer.Character then return end
-    local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    
-    local moveVec = Vector3.new(0, 0, 0)
-    if activeKeys[Enum.KeyCode.W] then moveVec = moveVec + Vector3.new(0,0,-1) end
-    if activeKeys[Enum.KeyCode.S] then moveVec = moveVec + Vector3.new(0,0,1) end
-    if activeKeys[Enum.KeyCode.A] then moveVec = moveVec + Vector3.new(-1,0,0) end
-    if activeKeys[Enum.KeyCode.D] then moveVec = moveVec + Vector3.new(1,0,0) end
-    
-    if moveVec.Magnitude > 0 then
-        hum:Move(moveVec, true)
-    end
-    if activeKeys[Enum.KeyCode.Space] then hum.Jump = true end
-end)
-
------------------------------------------
--- 3. UI INTERNAL & EVENTS
+-- 2. ELEMENT INTERNAL (CLEAN TEXT)
 -----------------------------------------
 local function createBtn(name, pos, color)
     local b = Instance.new("TextButton")
@@ -129,12 +89,14 @@ local function createBtn(name, pos, color)
     return b
 end
 
-local InputField = Instance.new("")
+local InputField = Instance.new("TextBox")
 InputField.Size = UDim2.new(0.85, 0, 0, 30)
 InputField.Position = UDim2.new(0.075, 0, 0.08, 0)
-InputField.PlaceholderText = "Type..."
+InputField.PlaceholderText = "Type.." -- Sesuai Permintaan
+InputField.Text = "" -- Memastikan kolom kosong saat dijalankan
 InputField.BackgroundColor3 = Color3.fromRGB(40,40,40)
 InputField.TextColor3 = Color3.new(1,1,1)
+InputField.Font = Enum.Font.Gotham
 InputField.Parent = ContentFrame
 Instance.new("UICorner", InputField)
 
@@ -142,6 +104,27 @@ local SpawnBtn = createBtn("SPAWN KEY", UDim2.new(0.075, 0, 0.25, 0), Color3.fro
 local PCModeBtn = createBtn("PC MODE: OFF", UDim2.new(0.075, 0, 0.43, 0), Color3.fromRGB(80, 80, 80))
 local LockBtn = createBtn("LOCK KEYS: OFF", UDim2.new(0.075, 0, 0.61, 0), Color3.fromRGB(80, 80, 80))
 local DeleteBtn = createBtn("DELETE", UDim2.new(0.075, 0, 0.79, 0), Color3.fromRGB(150, 0, 0))
+
+-----------------------------------------
+-- LOGIKA MOVEMENT & SPAWN
+-----------------------------------------
+local function forceKey(keyCode, state)
+    if not isPCMode then return end
+    if state == Enum.UserInputState.Begin then activeKeys[keyCode] = true else activeKeys[keyCode] = nil end
+end
+
+RunService.RenderStepped:Connect(function()
+    if not isPCMode or not LocalPlayer.Character then return end
+    local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    local moveVec = Vector3.new(0, 0, 0)
+    if activeKeys[Enum.KeyCode.W] then moveVec = moveVec + Vector3.new(0,0,-1) end
+    if activeKeys[Enum.KeyCode.S] then moveVec = moveVec + Vector3.new(0,0,1) end
+    if activeKeys[Enum.KeyCode.A] then moveVec = moveVec + Vector3.new(-1,0,0) end
+    if activeKeys[Enum.KeyCode.D] then moveVec = moveVec + Vector3.new(1,0,0) end
+    if moveVec.Magnitude > 0 then hum:Move(moveVec, true) end
+    if activeKeys[Enum.KeyCode.Space] then hum.Jump = true end
+end)
 
 DragAnchor.MouseButton1Click:Connect(function()
     isHidden = not isHidden
@@ -184,7 +167,10 @@ local function createKeyBtn(keyName)
 end
 
 SpawnBtn.MouseButton1Click:Connect(function()
-    if InputField.Text ~= "" then createKeyBtn(InputField.Text); InputField.Text = "" end
+    if InputField.Text ~= "" then 
+        createKeyBtn(InputField.Text)
+        InputField.Text = "" -- Langsung hapus teks setelah spawn
+    end
 end)
 
 DeleteBtn.MouseButton1Click:Connect(function()
