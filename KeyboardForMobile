@@ -129,10 +129,10 @@ local function createBtn(name, pos, color)
     return b
 end
 
-local InputField = Instance.new("TextBox")
+local InputField = Instance.new("")
 InputField.Size = UDim2.new(0.85, 0, 0, 30)
 InputField.Position = UDim2.new(0.075, 0, 0.08, 0)
-InputField.PlaceholderText = "Ketik: W / E / F"
+InputField.PlaceholderText = "Type..."
 InputField.BackgroundColor3 = Color3.fromRGB(40,40,40)
 InputField.TextColor3 = Color3.new(1,1,1)
 InputField.Parent = ContentFrame
