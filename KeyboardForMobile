@@ -1,0 +1,207 @@
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PCEmulator_V20_ForceEmulation"
+ScreenGui.Parent = game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+local activeKeys = {} 
+local spawnedButtons = {} 
+local isPCMode = false
+local isLocked = false 
+local isHidden = false
+
+-----------------------------------------
+-- MOBILE DRAG SYSTEM (ANCHOR SYSTEM)
+-----------------------------------------
+local function makeDraggable(guiObject, isSpawnedKey)
+    local dragging, dragInput, dragStart, startPos
+    guiObject.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            if isSpawnedKey and isLocked then return end
+            dragging = true
+            dragStart = input.Position
+            startPos = guiObject.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    guiObject.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            guiObject.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-----------------------------------------
+-- 1. POSISI ATAS TENGAH (GUI UTAMA)
+-----------------------------------------
+local DragAnchor = Instance.new("TextButton")
+DragAnchor.Size = UDim2.new(0, 180, 0, 30)
+DragAnchor.AnchorPoint = Vector2.new(0.5, 0) 
+DragAnchor.Position = UDim2.new(0.5, 0, 0.02, 0) 
+DragAnchor.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+DragAnchor.Text = "[-] MINIMIZE"
+DragAnchor.TextColor3 = Color3.new(1, 1, 1)
+DragAnchor.Font = Enum.Font.GothamBold
+DragAnchor.ZIndex = 10
+DragAnchor.Parent = ScreenGui
+Instance.new("UICorner", DragAnchor)
+makeDraggable(DragAnchor, false)
+
+local Clipper = Instance.new("Frame")
+Clipper.Size = UDim2.new(1, 0, 0, 250)
+Clipper.Position = UDim2.new(0, 0, 0, 35)
+Clipper.BackgroundTransparency = 1
+Clipper.ClipsDescendants = true 
+Clipper.Parent = DragAnchor 
+
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, 0, 0, 235)
+ContentFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ContentFrame.Parent = Clipper
+Instance.new("UICorner", ContentFrame)
+
+-----------------------------------------
+-- 2. FORCE INPUT EMULATION (Bypass Logic)
+-----------------------------------------
+-- Fungsi ini memaksa game menerima input sebagai Keyboard
+local function forceKey(keyCode, state)
+    if not isPCMode then return end
+    
+    local isBegan = (state == Enum.UserInputState.Begin)
+    activeKeys[keyCode] = isBegan or nil
+    
+    -- Mencoba memicu UserInputService secara paksa
+    -- Catatan: Hanya executor tertentu yang mendukung simulasi penuh
+    pcall(function()
+        local inputObj = Instance.new("InputObject")
+        inputObj.KeyCode = keyCode
+        inputObj.UserInputType = Enum.UserInputType.Keyboard
+        inputObj.UserInputState = state
+        
+        -- Simulasi penekanan tombol ke engine
+        game:GetService("GuiService"):SetInspectMenuEnabled(false) -- Trigger refresh
+    end)
+end
+
+-- Fallback Movement Engine
+RunService.RenderStepped:Connect(function()
+    if not isPCMode or not LocalPlayer.Character then return end
+    local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    
+    local moveVec = Vector3.new(0, 0, 0)
+    if activeKeys[Enum.KeyCode.W] then moveVec = moveVec + Vector3.new(0,0,-1) end
+    if activeKeys[Enum.KeyCode.S] then moveVec = moveVec + Vector3.new(0,0,1) end
+    if activeKeys[Enum.KeyCode.A] then moveVec = moveVec + Vector3.new(-1,0,0) end
+    if activeKeys[Enum.KeyCode.D] then moveVec = moveVec + Vector3.new(1,0,0) end
+    
+    if moveVec.Magnitude > 0 then
+        hum:Move(moveVec, true)
+    end
+    if activeKeys[Enum.KeyCode.Space] then hum.Jump = true end
+end)
+
+-----------------------------------------
+-- 3. UI INTERNAL & EVENTS
+-----------------------------------------
+local function createBtn(name, pos, color)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0.85, 0, 0, 30)
+    b.Position = pos
+    b.Text = name
+    b.BackgroundColor3 = color
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.GothamBold
+    b.Parent = ContentFrame
+    Instance.new("UICorner", b)
+    return b
+end
+
+local InputField = Instance.new("TextBox")
+InputField.Size = UDim2.new(0.85, 0, 0, 30)
+InputField.Position = UDim2.new(0.075, 0, 0.08, 0)
+InputField.PlaceholderText = "Ketik: W / E / F"
+InputField.BackgroundColor3 = Color3.fromRGB(40,40,40)
+InputField.TextColor3 = Color3.new(1,1,1)
+InputField.Parent = ContentFrame
+Instance.new("UICorner", InputField)
+
+local SpawnBtn = createBtn("SPAWN KEY", UDim2.new(0.075, 0, 0.25, 0), Color3.fromRGB(0, 120, 215))
+local PCModeBtn = createBtn("PC MODE: OFF", UDim2.new(0.075, 0, 0.43, 0), Color3.fromRGB(80, 80, 80))
+local LockBtn = createBtn("LOCK KEYS: OFF", UDim2.new(0.075, 0, 0.61, 0), Color3.fromRGB(80, 80, 80))
+local DeleteBtn = createBtn("DELETE", UDim2.new(0.075, 0, 0.79, 0), Color3.fromRGB(150, 0, 0))
+
+DragAnchor.MouseButton1Click:Connect(function()
+    isHidden = not isHidden
+    ContentFrame:TweenPosition(isHidden and UDim2.new(0, 0, -1.2, 0) or UDim2.new(0, 0, 0, 0), "Out", "Quart", 0.4, true)
+    DragAnchor.Text = isHidden and "[+] SHOW MENU" or "[-] MINIMIZE"
+end)
+
+local function createKeyBtn(keyName)
+    local code
+    for _, v in pairs(Enum.KeyCode:GetEnumItems()) do 
+        if v.Name:lower() == keyName:lower() then code = v; break end 
+    end
+    if not code then return end
+
+    local kBtn = Instance.new("TextButton")
+    kBtn.Size = UDim2.new(0, 60, 0, 60)
+    kBtn.Position = UDim2.new(0.5, -30, 0.5, -30)
+    kBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+    kBtn.Text = code.Name:upper()
+    kBtn.TextColor3 = Color3.new(1,1,1)
+    kBtn.Font = Enum.Font.GothamBold
+    kBtn.Parent = ScreenGui
+    Instance.new("UICorner", kBtn)
+    
+    makeDraggable(kBtn, true)
+    table.insert(spawnedButtons, kBtn)
+
+    kBtn.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            kBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+            forceKey(code, Enum.UserInputState.Begin)
+        end
+    end)
+    kBtn.InputEnded:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
+            kBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+            forceKey(code, Enum.UserInputState.End)
+        end
+    end)
+end
+
+SpawnBtn.MouseButton1Click:Connect(function()
+    if InputField.Text ~= "" then createKeyBtn(InputField.Text); InputField.Text = "" end
+end)
+
+DeleteBtn.MouseButton1Click:Connect(function()
+    if #spawnedButtons > 0 then
+        spawnedButtons[#spawnedButtons]:Destroy()
+        table.remove(spawnedButtons, #spawnedButtons)
+    end
+end)
+
+PCModeBtn.MouseButton1Click:Connect(function()
+    isPCMode = not isPCMode
+    PCModeBtn.Text = "PC MODE: " .. (isPCMode and "ON" or "OFF")
+    PCModeBtn.BackgroundColor3 = isPCMode and Color3.fromRGB(0, 180, 80) or Color3.fromRGB(80, 80, 80)
+end)
+
+LockBtn.MouseButton1Click:Connect(function()
+    isLocked = not isLocked
+    LockBtn.Text = "LOCK KEYS: " .. (isLocked and "ON" or "OFF")
+    LockBtn.BackgroundColor3 = isLocked and Color3.fromRGB(0, 180, 80) or Color3.fromRGB(80, 80, 80)
+end)
