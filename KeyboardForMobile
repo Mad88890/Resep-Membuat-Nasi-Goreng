@@ -1,10 +1,11 @@
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager") -- Simulasi Keyboard Fisik
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PCEmulator_V21_CleanUI"
+ScreenGui.Name = "PCEmulator_V24_ComboInjection"
 ScreenGui.Parent = game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
@@ -68,13 +69,40 @@ Clipper.Parent = DragAnchor
 
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Size = UDim2.new(1, 0, 0, 235)
-ContentFrame.Position = UDim2.new(0, 0, 0, 0)
 ContentFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 ContentFrame.Parent = Clipper
 Instance.new("UICorner", ContentFrame)
 
 -----------------------------------------
--- 2. ELEMENT INTERNAL (CLEAN TEXT)
+-- 2. VIRTUAL MANAGER ENGINE
+-----------------------------------------
+local function sendKeySignal(keyCode, isDown)
+    if not isPCMode then return end
+    
+    -- Mengirim sinyal keyboard asli ke engine game (Work untuk E, F, G, Pesawat, dll)
+    pcall(function()
+        VirtualInputManager:SendKeyEvent(keyCode, isDown, false, game)
+    end)
+    
+    -- Update state untuk pergerakan karakter
+    if isDown then activeKeys[keyCode] = true else activeKeys[keyCode] = nil end
+end
+
+RunService.RenderStepped:Connect(function()
+    if not isPCMode or not LocalPlayer.Character then return end
+    local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    local moveVec = Vector3.new(0, 0, 0)
+    if activeKeys[Enum.KeyCode.W] then moveVec = moveVec + Vector3.new(0,0,-1) end
+    if activeKeys[Enum.KeyCode.S] then moveVec = moveVec + Vector3.new(0,0,1) end
+    if activeKeys[Enum.KeyCode.A] then moveVec = moveVec + Vector3.new(-1,0,0) end
+    if activeKeys[Enum.KeyCode.D] then moveVec = moveVec + Vector3.new(1,0,0) end
+    if moveVec.Magnitude > 0 then hum:Move(moveVec, true) end
+    if activeKeys[Enum.KeyCode.Space] then hum.Jump = true end
+end)
+
+-----------------------------------------
+-- 3. UI INTERNAL (CLEAN)
 -----------------------------------------
 local function createBtn(name, pos, color)
     local b = Instance.new("TextButton")
@@ -92,8 +120,8 @@ end
 local InputField = Instance.new("TextBox")
 InputField.Size = UDim2.new(0.85, 0, 0, 30)
 InputField.Position = UDim2.new(0.075, 0, 0.08, 0)
-InputField.PlaceholderText = "Type.." -- Sesuai Permintaan
-InputField.Text = "" -- Memastikan kolom kosong saat dijalankan
+InputField.PlaceholderText = "Type.." -- Permintaanmu
+InputField.Text = "" -- Bersih saat dijalankan
 InputField.BackgroundColor3 = Color3.fromRGB(40,40,40)
 InputField.TextColor3 = Color3.new(1,1,1)
 InputField.Font = Enum.Font.Gotham
@@ -105,31 +133,10 @@ local PCModeBtn = createBtn("PC MODE: OFF", UDim2.new(0.075, 0, 0.43, 0), Color3
 local LockBtn = createBtn("LOCK KEYS: OFF", UDim2.new(0.075, 0, 0.61, 0), Color3.fromRGB(80, 80, 80))
 local DeleteBtn = createBtn("DELETE", UDim2.new(0.075, 0, 0.79, 0), Color3.fromRGB(150, 0, 0))
 
------------------------------------------
--- LOGIKA MOVEMENT & SPAWN
------------------------------------------
-local function forceKey(keyCode, state)
-    if not isPCMode then return end
-    if state == Enum.UserInputState.Begin then activeKeys[keyCode] = true else activeKeys[keyCode] = nil end
-end
-
-RunService.RenderStepped:Connect(function()
-    if not isPCMode or not LocalPlayer.Character then return end
-    local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    local moveVec = Vector3.new(0, 0, 0)
-    if activeKeys[Enum.KeyCode.W] then moveVec = moveVec + Vector3.new(0,0,-1) end
-    if activeKeys[Enum.KeyCode.S] then moveVec = moveVec + Vector3.new(0,0,1) end
-    if activeKeys[Enum.KeyCode.A] then moveVec = moveVec + Vector3.new(-1,0,0) end
-    if activeKeys[Enum.KeyCode.D] then moveVec = moveVec + Vector3.new(1,0,0) end
-    if moveVec.Magnitude > 0 then hum:Move(moveVec, true) end
-    if activeKeys[Enum.KeyCode.Space] then hum.Jump = true end
-end)
-
 DragAnchor.MouseButton1Click:Connect(function()
     isHidden = not isHidden
     ContentFrame:TweenPosition(isHidden and UDim2.new(0, 0, -1.2, 0) or UDim2.new(0, 0, 0, 0), "Out", "Quart", 0.4, true)
-    DragAnchor.Text = isHidden and "[+] SHOW MENU" or "[-] MINIMIZE"
+    DragAnchor.Text = isHidden and "[+] SHOW" or "[-] MINIMIZE"
 end)
 
 local function createKeyBtn(keyName)
@@ -152,16 +159,18 @@ local function createKeyBtn(keyName)
     makeDraggable(kBtn, true)
     table.insert(spawnedButtons, kBtn)
 
+    -- Event InputBegan (Mulai tekan)
     kBtn.InputBegan:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
             kBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-            forceKey(code, Enum.UserInputState.Begin)
+            sendKeySignal(code, true)
         end
     end)
+    -- Event InputEnded (Lepas tekan)
     kBtn.InputEnded:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.Touch or inp.UserInputType == Enum.UserInputType.MouseButton1 then
             kBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-            forceKey(code, Enum.UserInputState.End)
+            sendKeySignal(code, false)
         end
     end)
 end
@@ -169,7 +178,7 @@ end
 SpawnBtn.MouseButton1Click:Connect(function()
     if InputField.Text ~= "" then 
         createKeyBtn(InputField.Text)
-        InputField.Text = "" -- Langsung hapus teks setelah spawn
+        InputField.Text = "" -- Hapus TextBox otomatis setelah spawn
     end
 end)
 
